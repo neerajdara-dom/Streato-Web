@@ -185,8 +185,69 @@ class LoginScreen extends StatelessWidget {
     );
   }
 }
-class HomeScreen extends StatelessWidget {
+class HoverSearchBar extends StatefulWidget {
+  const HoverSearchBar({super.key});
+
+  @override
+  State<HoverSearchBar> createState() => _HoverSearchBarState();
+}
+
+class _HoverSearchBarState extends State<HoverSearchBar> {
+  bool isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => isHovered = true),
+      onExit: (_) => setState(() => isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        height: 50,
+        transform: isHovered
+            ? (Matrix4.identity()..scale(1.03))
+            : Matrix4.identity(),
+        decoration: BoxDecoration(
+          gradient: isHovered ? streatoGradient : null,
+          color: isHovered ? null : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+            )
+          ],
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: isHovered ? Colors.transparent : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.search),
+              SizedBox(width: 10),
+              Text("Search street food, stalls, stories..."),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+
+class _HomeScreenState extends State<HomeScreen> {
+  int streatoPoints = 0; // 🔥 USER POINTS
 
   @override
   Widget build(BuildContext context) {
@@ -253,8 +314,6 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
-
-
             // MAIN CONTENT
             Expanded(
               child: Column(
@@ -264,33 +323,50 @@ class HomeScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
                       children: [
-                        // Search
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 10,
-                                )
-                              ],
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.search),
-                                SizedBox(width: 10),
-                                Text("Search street food, stalls, stories..."),
-                              ],
-                            ),
+                        // 🔍 SEARCH BAR (50% WIDTH + HOVER EFFECT)
+                        SizedBox(
+                          width: MediaQuery.of(context).size.width * 0.5,
+                          child: const HoverSearchBar(),
+                        ),
+
+                        const Spacer(),
+
+                        // 🔥 STREATO POINTS
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 8,
+                              )
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.local_fire_department, color: Colors.orange),
+                              const SizedBox(width: 6),
+                              Text(
+                                streatoPoints.toString(),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
+
                         const SizedBox(width: 16),
+
+                        // 🛒 CART
                         const Icon(Icons.shopping_cart_outlined, size: 26),
+
                         const SizedBox(width: 16),
+
+                        // 👤 PROFILE
                         const CircleAvatar(
                           radius: 18,
                           backgroundColor: Color(0xFFFFBF00),
@@ -299,6 +375,7 @@ class HomeScreen extends StatelessWidget {
                       ],
                     ),
                   ),
+
                   // HORIZONTAL DIVIDER
                   Container(
                     height: 1,
@@ -306,66 +383,69 @@ class HomeScreen extends StatelessWidget {
                     color: Colors.amber.withOpacity(0.6),
                   ),
 
-                  // HERO + CONTENT
+                  // HERO + CONTENT (SCROLLABLE)
                   Expanded(
                     child: Row(
                       children: [
                         // LEFT CONTENT AREA
                         Expanded(
                           flex: 3,
-                          child: Column(
-                            children: [
-                              // HERO CARD
-                              Container(
-                                height: 260,
-                                margin: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(24),
-                                  color: Colors.black,
-                                  image: const DecorationImage(
-                                    image: NetworkImage(
-                                      "https://images.unsplash.com/photo-1601050690597-df0568f70950",
-                                    ),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                child: Container(
-                                  padding: const EdgeInsets.all(24),
+                          child: SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                // HERO CARD
+                                Container(
+                                  height: 350,
+                                  margin: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(24),
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.black.withOpacity(0.6),
-                                        Colors.transparent,
-                                      ],
-                                      begin: Alignment.bottomLeft,
-                                      end: Alignment.topRight,
+                                    color: Colors.black,
+                                    image: const DecorationImage(
+                                      image: NetworkImage(
+                                        "https://plus.unsplash.com/premium_photo-1695297516142-398762d80f66?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NDF8fHN0cmVldCUyMGZvb2R8ZW58MHx8MHx8fDA%3D",
+                                      ),
+                                      fit: BoxFit.cover,
                                     ),
                                   ),
-                                  child: const Align(
-                                    alignment: Alignment.bottomLeft,
-                                    child: Text(
-                                      "Discover the stories\nbehind street food ❤️",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(24),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(24),
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.black.withOpacity(0.6),
+                                          Colors.transparent,
+                                        ],
+                                        begin: Alignment.bottomLeft,
+                                        end: Alignment.topRight,
+                                      ),
+                                    ),
+                                    child: const Align(
+                                      alignment: Alignment.bottomLeft,
+                                      child: Text(
+                                        "Discover the stories\nbehind street food ❤️",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              // FEATURE CARDS GRID (3 per row, rectangular)
-                              Expanded(
-                                child: Padding(
+
+                                // FEATURE CARDS GRID
+                                Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 16),
                                   child: GridView.builder(
+                                    shrinkWrap: true, // 👈 VERY IMPORTANT
+                                    physics: const NeverScrollableScrollPhysics(), // 👈 VERY IMPORTANT
                                     itemCount: 6,
                                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 3, // 3 cards per row
+                                      crossAxisCount: 3,
                                       crossAxisSpacing: 20,
                                       mainAxisSpacing: 20,
-                                      childAspectRatio: 1.6, // Rectangle shape (width > height)
+                                      childAspectRatio: 1.6,
                                     ),
                                     itemBuilder: (context, index) {
                                       return Container(
@@ -392,21 +472,21 @@ class HomeScreen extends StatelessWidget {
                                     },
                                   ),
                                 ),
-                              )
-                            ],
+
+                                const SizedBox(height: 40), // bottom space
+                              ],
+                            ),
                           ),
                         ),
 
-                        // RIGHT FLOATING MAP BUTTON
+                        // RIGHT FLOATING MAP BUTTON (STAYS FIXED)
                         SizedBox(
                           width: 80,
                           child: Column(
                             children: [
                               const SizedBox(height: 20),
                               GestureDetector(
-                                onTap: () {
-                                  // Open map later
-                                },
+                                onTap: () {},
                                 child: Container(
                                   height: 56,
                                   width: 56,
