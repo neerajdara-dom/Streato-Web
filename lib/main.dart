@@ -8,7 +8,7 @@ class AnimatedMeshBackground extends StatefulWidget {
   State<AnimatedMeshBackground> createState() => _AnimatedMeshBackgroundState();
 }
 class DoodleOverlay extends StatelessWidget {
-  const DoodleOverlay({super.key});
+  DoodleOverlay({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -525,30 +525,158 @@ class HomeScreen extends StatefulWidget {
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
+class HomePageContent extends StatelessWidget {
+  HomePageContent({super.key});
 
-
-class _HomeScreenState extends State<HomeScreen> {
-  int streatoPoints = 0; // 🔥 USER POINTS
-
-  @override
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // HERO
+          Container(
+            height: 350,
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              image: const DecorationImage(
+                image: NetworkImage(
+                  "https://plus.unsplash.com/premium_photo-1695297516142-398762d80f66?w=600&auto=format&fit=crop&q=60",
+                ),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+
+          // FEATURE GRID
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: 6,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 20,
+                mainAxisSpacing: 20,
+                childAspectRatio: 1.6,
+              ),
+              itemBuilder: (context, index) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Center(child: Text("Feature Card")),
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+}
+class StallsPageContent extends StatelessWidget {
+  StallsPageContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: GridView.builder(
+        itemCount: 12,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4, // 4 stalls per row
+          crossAxisSpacing: 20,
+          mainAxisSpacing: 20,
+          childAspectRatio: 1.05,
+        ),
+        itemBuilder: (context, index) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 10,
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // IMAGE
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    child: Image.network(
+                      "https://images.unsplash.com/photo-1601050690597-df0568f70950",
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+
+                // INFO
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Spicy Corner",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: const [
+                          Icon(Icons.star, size: 16, color: Colors.amber),
+                          SizedBox(width: 4),
+                          Text("4.3"),
+                          Spacer(),
+                          Icon(Icons.location_on, size: 16),
+                          SizedBox(width: 2),
+                          Text("1.2 km"),
+                        ],
+                      )
+                    ],
+                  ),
+                )
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int streatoPoints = 0;
+  int selectedPage = 0; // 0 = Home, 1 = Stalls
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+        animation: ThemeProvider.of(context),
+        builder: (context, _) {
+          return Scaffold(
+          body: Stack(
         children: [
           // 🌋 BACKGROUND
           const AnimatedMeshBackground(),
-          const DoodleOverlay(),
+           DoodleOverlay(),
 
           // 🧱 FOREGROUND UI
           SafeArea(
             child: Container(
-              decoration:BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.18),
-              ),
               child: Row(
                 children: [
-                  // LEFT NAV
+                  // LEFT NAV BAR
                   Container(
                     width: 90,
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -558,6 +686,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           width: 70,
                           child: Column(
                             children: [
+                              // LOGO
                               Container(
                                 height: 56,
                                 width: 56,
@@ -572,10 +701,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                               ),
+
                               const SizedBox(height: 40),
-                              _NavIcon(icon: Icons.home, isActive: true),
+
+                              _NavIcon(
+                                icon: Icons.home,
+                                isActive: selectedPage == 0,
+                                onTap: () => setState(() => selectedPage = 0),
+                              ),
                               const SizedBox(height: 28),
-                              _NavIcon(icon: Icons.storefront),
+                              _NavIcon(
+                                icon: Icons.storefront,
+                                isActive: selectedPage == 1,
+                                onTap: () => setState(() => selectedPage = 1),
+                              ),
                               const SizedBox(height: 28),
                               _NavIcon(icon: Icons.menu_book),
                               const SizedBox(height: 28),
@@ -585,6 +724,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
+
+                        // DIVIDER
                         Container(
                           width: 1,
                           margin: const EdgeInsets.symmetric(vertical: 8),
@@ -658,65 +799,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         // DIVIDER
                         Container(
                           height: 1,
-                          margin:
-                          const EdgeInsets.symmetric(horizontal: 16),
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
                           color: Colors.amber.withOpacity(0.6),
                         ),
 
-                        // CONTENT
+                        // PAGE CONTENT
                         Expanded(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              children: [
-                                Container(
-                                  height: 350,
-                                  margin: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(24),
-                                    image: const DecorationImage(
-                                      image: NetworkImage(
-                                        "https://plus.unsplash.com/premium_photo-1695297516142-398762d80f66?w=600&auto=format&fit=crop&q=60",
-                                      ),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16),
-                                  child: GridView.builder(
-                                    shrinkWrap: true,
-                                    physics:
-                                    const NeverScrollableScrollPhysics(),
-                                    itemCount: 6,
-                                    gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 3,
-                                      crossAxisSpacing: 20,
-                                      mainAxisSpacing: 20,
-                                      childAspectRatio: 1.6,
-                                    ),
-                                    itemBuilder: (context, index) {
-                                      return Container(
-                                        decoration: BoxDecoration(
-                                          color:
-                                          Theme.of(context).cardColor,
-                                          borderRadius:
-                                          BorderRadius.circular(24),
-                                        ),
-                                        child: const Center(
-                                          child: Text("Feature Card"),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-
-                                const SizedBox(height: 40),
-                              ],
-                            ),
-                          ),
+                          child: selectedPage == 0
+                              ?  HomePageContent()
+                              :  StallsPageContent(),
                         ),
                       ],
                     ),
@@ -727,35 +818,43 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+          );
+        },
     );
   }
 }
+
 class _NavIcon extends StatelessWidget {
   final IconData icon;
   final bool isActive;
+  final VoidCallback? onTap;
 
   const _NavIcon({
     required this.icon,
     this.isActive = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      height: 44,
-      width: 44,
-      decoration: BoxDecoration(
-        color: isActive ? const Color(0xFFFFBF00) : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(
-        icon,
-        size: 24,
-        color: isActive
-            ? Colors.black
-            : (isDark ? Colors.white70 : Colors.black54),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 44,
+        width: 44,
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFFFFBF00) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          icon,
+          size: 24,
+          color: isActive
+              ? Colors.black
+              : (isDark ? Colors.white70 : Colors.black54),
+        ),
       ),
     );
   }
