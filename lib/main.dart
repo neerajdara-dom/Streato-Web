@@ -1,4 +1,243 @@
 import 'package:flutter/material.dart';
+import 'dart:math';
+
+class AnimatedMeshBackground extends StatefulWidget {
+  const AnimatedMeshBackground({super.key});
+
+  @override
+  State<AnimatedMeshBackground> createState() => _AnimatedMeshBackgroundState();
+}
+class DoodleOverlay extends StatelessWidget {
+  const DoodleOverlay({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return IgnorePointer(
+      child: CustomPaint(
+        painter: _DoodlePainter(isDark: isDark),
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+}
+
+class _DoodlePainter extends CustomPainter {
+  final bool isDark;
+  final Random r = Random(65); // fixed seed = no movement
+
+  _DoodlePainter({required this.isDark});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = (isDark ? Colors.white : Colors.black).withOpacity(0.07)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2   // 👈 THICKER
+      ..strokeCap = StrokeCap.round;
+
+    for (int i = 0; i < 45; i++) {
+      final x = r.nextDouble() * size.width;
+      final y = r.nextDouble() * size.height;
+      final s = r.nextDouble() * 0.03+0.01;
+
+      switch (r.nextInt(6)) {
+        case 0:
+        // bowl
+          canvas.drawArc(
+            Rect.fromCenter(center: Offset(x, y), width: s, height: s),
+            0,
+            pi,
+            false,
+            paint,
+          );
+          break;
+
+        case 1:
+        // flame
+          final path = Path()
+            ..moveTo(x, y)
+            ..quadraticBezierTo(x + s * 0.3, y - s, x, y - s * 1.2)
+            ..quadraticBezierTo(x - s * 0.3, y - s, x, y);
+          canvas.drawPath(path, paint);
+          break;
+
+        case 2:
+        // spoon
+          canvas.drawCircle(Offset(x, y), s * 0.18, paint);
+          canvas.drawLine(
+            Offset(x, y + s * 0.18),
+            Offset(x, y + s),
+            paint,
+          );
+          break;
+
+        case 3:
+        // pan
+          canvas.drawCircle(Offset(x, y), s * 0.32, paint);
+          canvas.drawLine(
+            Offset(x + s * 0.32, y),
+            Offset(x + s * 0.8, y),
+            paint,
+          );
+          break;
+
+        case 4:
+        // star
+          canvas.drawLine(Offset(x - s, y), Offset(x + s, y), paint);
+          canvas.drawLine(Offset(x, y - s), Offset(x, y + s), paint);
+          break;
+
+        case 5:
+        // squiggle
+          final path = Path()
+            ..moveTo(x - s, y)
+            ..quadraticBezierTo(x, y - s, x + s, y)
+            ..quadraticBezierTo(x + s * 1.5, y + s, x + s * 2, y);
+          canvas.drawPath(path, paint);
+          break;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+
+
+class _AnimatedMeshBackgroundState extends State<AnimatedMeshBackground>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  final Random random = Random();
+
+  late List<_Blob> blobs;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 30),
+    )..repeat();
+
+    blobs = List.generate(15, (_) => _Blob.random(random));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        return CustomPaint(
+          painter: _MeshPainter(
+            blobs: blobs,
+            isDark: isDark,
+          ),
+
+          child: const SizedBox.expand(),
+        );
+      },
+    );
+  }
+}
+
+class _Blob {
+  Offset pos;
+  Offset velocity;
+  double radius;
+
+  _Blob(this.pos, this.velocity, this.radius);
+
+  factory _Blob.random(Random r) {
+    return _Blob(
+      Offset(r.nextDouble(), r.nextDouble()),
+      Offset(
+        (r.nextDouble() - 0.5) * 0.0006,
+        (r.nextDouble() - 0.5) * 0.0006,
+      ),
+      r.nextDouble() * 0.25 + 0.12,
+    );
+  }
+}
+
+class _MeshPainter extends CustomPainter {
+  final List<_Blob> blobs;
+  final bool isDark;
+
+  _MeshPainter({
+    required this.blobs,
+    required this.isDark,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..blendMode = BlendMode.plus;
+
+    for (final blob in blobs) {
+      // 🌊 Move blob continuously
+      blob.pos += blob.velocity;
+
+      // 🔁 Soft wrap around screen
+      if (blob.pos.dx < -0.2) blob.pos = Offset(1.2, blob.pos.dy);
+      if (blob.pos.dx > 1.2) blob.pos = Offset(-0.2, blob.pos.dy);
+      if (blob.pos.dy < -0.2) blob.pos = Offset(blob.pos.dx, 1.2);
+      if (blob.pos.dy > 1.2) blob.pos = Offset(blob.pos.dx, -0.2);
+
+      final center = Offset(
+        blob.pos.dx * size.width,
+        blob.pos.dy * size.height,
+      );
+
+      final radius = blob.radius * min(size.width, size.height);
+
+      final gradient = RadialGradient(
+        colors: isDark
+            ? [
+          const Color(0xFFFFB300).withOpacity(0.45),
+          Colors.transparent,
+        ]
+            : [
+          const Color(0xFFFFC107).withOpacity(0.65),
+          Colors.transparent,
+        ],
+      );
+
+      paint.shader = gradient.createShader(
+        Rect.fromCircle(center: center, radius: radius),
+      );
+
+      canvas.drawCircle(center, radius, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+
+class ThemeProvider extends InheritedNotifier<ThemeController> {
+  const ThemeProvider({
+    super.key,
+    required ThemeController controller,
+    required Widget child,
+  }) : super(notifier: controller, child: child);
+
+  static ThemeController of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<ThemeProvider>()!.notifier!;
+  }
+}
+
 const LinearGradient streatoGradient = LinearGradient(
   colors: [
     Color(0xFFFF8F00), // Deep Orange
@@ -8,31 +247,71 @@ const LinearGradient streatoGradient = LinearGradient(
   end: Alignment.bottomRight,
 );
 
+class ThemeController extends ChangeNotifier {
+  bool isDark = false;
 
-void main() {
-  runApp(const StreatoApp());
+  void toggleTheme() {
+    isDark = !isDark;
+    notifyListeners();
+  }
 }
 
+void main() {
+  final themeController = ThemeController();
+
+  runApp(
+    ThemeProvider(
+      controller: themeController,
+      child: StreatoApp(controller: themeController),
+    ),
+  );
+}
+
+
 class StreatoApp extends StatelessWidget {
-  const StreatoApp({super.key});
+  final ThemeController controller;
+
+  const StreatoApp({super.key, required this.controller});
+
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Streato',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.light,
-        primaryColor: const Color(0xFFFFBF00), // Amber Yellow
-        scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'Poppins',
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFFBF00),
-        ),
-      ),
-      home: const SplashScreen(),
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+
+          themeMode: controller.isDark ? ThemeMode.dark : ThemeMode.light,
+
+          theme: ThemeData(
+            brightness: Brightness.light,
+            scaffoldBackgroundColor: const Color(0xFFF7F7F7),
+            cardColor: Colors.white,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFFFFBF00),
+              brightness: Brightness.light,
+            ),
+          ),
+
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor: const Color(0xFF1C1C1C), // 👈 YOUR REQUIRED COLOR
+            cardColor: const Color(0xFF252525),
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFFFFBF00),
+              brightness: Brightness.dark,
+            ),
+          ),
+
+          home: const SplashScreen(),
+        );
+
+
+      },
     );
   }
+
 }
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -92,7 +371,7 @@ class _SplashScreenState extends State<SplashScreen> {
               "Discover Street Food Stories",
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.white70,
+                color: Colors.white,
               ),
             ),
           ],
@@ -101,6 +380,7 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
+
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
@@ -152,7 +432,7 @@ class LoginScreen extends StatelessWidget {
                 height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFBF00),
+                    backgroundColor: Theme.of(context).cardColor,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -221,7 +501,7 @@ class _HoverSearchBarState extends State<HoverSearchBar> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: isHovered ? Colors.transparent : Colors.white,
+            color: isHovered ? Colors.transparent : Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(16),
           ),
           child: const Row(
@@ -238,6 +518,7 @@ class _HoverSearchBarState extends State<HoverSearchBar> {
 }
 
 
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -250,198 +531,167 @@ class _HomeScreenState extends State<HomeScreen> {
   int streatoPoints = 0; // 🔥 USER POINTS
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
-      body: SafeArea(
-        child: Row(
-          children: [
-            // LEFT MINIMAL NAV BAR
-            Container(
-              width: 90,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+      body: Stack(
+        children: [
+          // 🌋 BACKGROUND
+          const AnimatedMeshBackground(),
+          const DoodleOverlay(),
+
+          // 🧱 FOREGROUND UI
+          SafeArea(
+            child: Container(
+              decoration:BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.18),
+              ),
               child: Row(
                 children: [
-                  // ICON COLUMN
-                  SizedBox(
-                    width: 70,
-                    child: Column(
-                      children: [
-                        // LOGO
-                        Container(
-                          height: 56,
-                          width: 56,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 8,
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.asset(
-                              "assets/images/streato.png",
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-
-
-                        const SizedBox(height: 40),
-
-                        _NavIcon(icon: Icons.home, isActive: true),
-                        const SizedBox(height: 28),
-                        _NavIcon(icon: Icons.storefront),
-                        const SizedBox(height: 28),
-                        _NavIcon(icon: Icons.menu_book),
-                        const SizedBox(height: 28),
-                        _NavIcon(icon: Icons.star),
-                        const SizedBox(height: 28),
-                        _NavIcon(icon: Icons.map),
-                      ],
-                    ),
-                  ),
-
-                  // VERTICAL DIVIDER LINE
+                  // LEFT NAV
                   Container(
-                    width: 1,
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    color: Colors.amber.withOpacity(0.6),
-                  ),
-                ],
-              ),
-            ),
-            // MAIN CONTENT
-            Expanded(
-              child: Column(
-                children: [
-                  // TOP BAR
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    width: 90,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Row(
                       children: [
-                        // 🔍 SEARCH BAR (50% WIDTH + HOVER EFFECT)
                         SizedBox(
-                          width: MediaQuery.of(context).size.width * 0.5,
-                          child: const HoverSearchBar(),
-                        ),
-
-                        const Spacer(),
-
-                        // 🔥 STREATO POINTS
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 8,
-                              )
-                            ],
-                          ),
-                          child: Row(
+                          width: 70,
+                          child: Column(
                             children: [
-                              const Icon(Icons.local_fire_department, color: Colors.orange),
-                              const SizedBox(width: 6),
-                              Text(
-                                streatoPoints.toString(),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                              Container(
+                                height: 56,
+                                width: 56,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Image.asset(
+                                    "assets/images/streato.png",
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
                               ),
+                              const SizedBox(height: 40),
+                              _NavIcon(icon: Icons.home, isActive: true),
+                              const SizedBox(height: 28),
+                              _NavIcon(icon: Icons.storefront),
+                              const SizedBox(height: 28),
+                              _NavIcon(icon: Icons.menu_book),
+                              const SizedBox(height: 28),
+                              _NavIcon(icon: Icons.star),
+                              const SizedBox(height: 28),
+                              _NavIcon(icon: Icons.map),
                             ],
                           ),
                         ),
-
-                        const SizedBox(width: 16),
-
-                        // 🛒 CART
-                        const Icon(Icons.shopping_cart_outlined, size: 26),
-
-                        const SizedBox(width: 16),
-
-                        // 👤 PROFILE
-                        const CircleAvatar(
-                          radius: 18,
-                          backgroundColor: Color(0xFFFFBF00),
-                          child: Icon(Icons.person, color: Colors.black),
-                        )
+                        Container(
+                          width: 1,
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          color: Colors.amber.withOpacity(0.6),
+                        ),
                       ],
                     ),
                   ),
 
-                  // HORIZONTAL DIVIDER
-                  Container(
-                    height: 1,
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    color: Colors.amber.withOpacity(0.6),
-                  ),
-
-                  // HERO + CONTENT (SCROLLABLE)
+                  // MAIN CONTENT
                   Expanded(
-                    child: Row(
+                    child: Column(
                       children: [
-                        // LEFT CONTENT AREA
+                        // TOP BAR
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: MediaQuery.of(context).size.width * 0.5,
+                                child: const HoverSearchBar(),
+                              ),
+                              const Spacer(),
+
+                              // THEME BUTTON
+                              GestureDetector(
+                                onTap: () {
+                                  ThemeProvider.of(context).toggleTheme();
+                                },
+                                child: Icon(
+                                  ThemeProvider.of(context).isDark
+                                      ? Icons.dark_mode
+                                      : Icons.light_mode,
+                                  size: 26,
+                                ),
+                              ),
+
+                              const SizedBox(width: 16),
+
+                              // POINTS
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).cardColor,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.local_fire_department,
+                                        color: Colors.orange),
+                                    const SizedBox(width: 6),
+                                    Text(streatoPoints.toString()),
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(width: 16),
+                              const Icon(Icons.shopping_cart_outlined, size: 26),
+                              const SizedBox(width: 16),
+                              const CircleAvatar(
+                                radius: 18,
+                                backgroundColor: Color(0xFFFFBF00),
+                                child:
+                                Icon(Icons.person, color: Colors.black),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // DIVIDER
+                        Container(
+                          height: 1,
+                          margin:
+                          const EdgeInsets.symmetric(horizontal: 16),
+                          color: Colors.amber.withOpacity(0.6),
+                        ),
+
+                        // CONTENT
                         Expanded(
-                          flex: 3,
                           child: SingleChildScrollView(
                             child: Column(
                               children: [
-                                // HERO CARD
                                 Container(
                                   height: 350,
                                   margin: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(24),
-                                    color: Colors.black,
                                     image: const DecorationImage(
                                       image: NetworkImage(
-                                        "https://plus.unsplash.com/premium_photo-1695297516142-398762d80f66?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NDF8fHN0cmVldCUyMGZvb2R8ZW58MHx8MHx8fDA%3D",
+                                        "https://plus.unsplash.com/premium_photo-1695297516142-398762d80f66?w=600&auto=format&fit=crop&q=60",
                                       ),
                                       fit: BoxFit.cover,
                                     ),
                                   ),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(24),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(24),
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Colors.black.withOpacity(0.6),
-                                          Colors.transparent,
-                                        ],
-                                        begin: Alignment.bottomLeft,
-                                        end: Alignment.topRight,
-                                      ),
-                                    ),
-                                    child: const Align(
-                                      alignment: Alignment.bottomLeft,
-                                      child: Text(
-                                        "Discover the stories\nbehind street food ❤️",
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
                                 ),
 
-                                // FEATURE CARDS GRID
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16),
                                   child: GridView.builder(
-                                    shrinkWrap: true, // 👈 VERY IMPORTANT
-                                    physics: const NeverScrollableScrollPhysics(), // 👈 VERY IMPORTANT
+                                    shrinkWrap: true,
+                                    physics:
+                                    const NeverScrollableScrollPhysics(),
                                     itemCount: 6,
-                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                    gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
                                       crossAxisCount: 3,
                                       crossAxisSpacing: 20,
                                       mainAxisSpacing: 20,
@@ -450,70 +700,32 @@ class _HomeScreenState extends State<HomeScreen> {
                                     itemBuilder: (context, index) {
                                       return Container(
                                         decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(24),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.05),
-                                              blurRadius: 12,
-                                            )
-                                          ],
+                                          color:
+                                          Theme.of(context).cardColor,
+                                          borderRadius:
+                                          BorderRadius.circular(24),
                                         ),
                                         child: const Center(
-                                          child: Text(
-                                            "Feature Card",
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
+                                          child: Text("Feature Card"),
                                         ),
                                       );
                                     },
                                   ),
                                 ),
 
-                                const SizedBox(height: 40), // bottom space
+                                const SizedBox(height: 40),
                               ],
                             ),
                           ),
                         ),
-
-                        // RIGHT FLOATING MAP BUTTON (STAYS FIXED)
-                        SizedBox(
-                          width: 80,
-                          child: Column(
-                            children: [
-                              const SizedBox(height: 20),
-                              GestureDetector(
-                                onTap: () {},
-                                child: Container(
-                                  height: 56,
-                                  width: 56,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: streatoGradient,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.25),
-                                        blurRadius: 12,
-                                      )
-                                    ],
-                                  ),
-                                  child: const Icon(Icons.map, size: 28),
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
                       ],
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -529,6 +741,8 @@ class _NavIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       height: 44,
       width: 44,
@@ -538,10 +752,13 @@ class _NavIcon extends StatelessWidget {
       ),
       child: Icon(
         icon,
-        color: isActive ? Colors.black : Colors.black54,
         size: 24,
+        color: isActive
+            ? Colors.black
+            : (isDark ? Colors.white70 : Colors.black54),
       ),
     );
   }
 }
+
 
