@@ -1,6 +1,196 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+class Stall {
+  final String name;
+  final double rating;
 
+  Stall({required this.name, required this.rating});
+}
+class _StallImagesGrid extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 260,
+      child: Row(
+        children: [
+          // BIG IMAGE
+          Expanded(
+            flex: 2,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.network(
+                "https://images.unsplash.com/photo-1601050690597-df0568f70950",
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // SMALL GRID
+          Expanded(
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: 4,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              itemBuilder: (context, index) {
+                if (index == 3) {
+                  return Stack(
+                    children: [
+                      _smallImage(),
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.black.withOpacity(0.5),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            "+12",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      )
+                    ],
+                  );
+                }
+                return _smallImage();
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _smallImage() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.network(
+        "https://images.unsplash.com/photo-1601050690597-df0568f70950",
+        fit: BoxFit.cover,
+      ),
+    );
+  }
+}
+
+class FoodStallDetailsContent extends StatelessWidget {
+  const FoodStallDetailsContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+
+          Center(
+            child: FractionallySizedBox(
+              widthFactor: 0.8,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 🏷️ TITLE + RATING
+                  Row(
+                    children: [
+                      const Text(
+                        "Spicy Corner",
+                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          "⭐ 4.2",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      )
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // 🖼️ IMAGE GRID
+                  _StallImagesGrid(),
+
+                  const SizedBox(height: 30),
+
+                  // 📋 MENU SECTION
+                  const Text(
+                    "Menu",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                  Container(
+                    height: 2,
+                    width: 60,
+                    margin: const EdgeInsets.only(top: 4, bottom: 16),
+                    color: Colors.amber,
+                  ),
+
+                  // 🔍 SEARCH
+                  Container(
+                    height: 44,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.search),
+                        SizedBox(width: 8),
+                        Text("Search in menu..."),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // 🍔 FOOD ITEMS
+                  _FoodItem("Samosa", 20),
+                  _FoodItem("Pav Bhaji", 60),
+                  _FoodItem("Dosa", 50),
+                  _FoodItem("Noodles", 70),
+
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _FoodItem(String name, int price) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.black.withOpacity(0.05),
+      ),
+      child: Row(
+        children: [
+          Text(name, style: const TextStyle(fontSize: 16)),
+          const Spacer(),
+          Text("₹$price", style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+}
 class AnimatedMeshBackground extends StatefulWidget {
   const AnimatedMeshBackground({super.key});
 
@@ -480,35 +670,26 @@ class _HoverSearchBarState extends State<HoverSearchBar> {
     return MouseRegion(
       onEnter: (_) => setState(() => isHovered = true),
       onExit: (_) => setState(() => isHovered = false),
-      child: AnimatedContainer(
+      child: AnimatedScale(
+        scale: isHovered ? 1.03 : 1.0,
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
-        height: 50,
-        transform: isHovered
-            ? (Matrix4.identity()..scale(1.03))
-            : Matrix4.identity(),
-        decoration: BoxDecoration(
-          gradient: isHovered ? streatoGradient : null,
-          color: isHovered ? null : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 12,
-            )
-          ],
-        ),
         child: Container(
+          height: 50,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: isHovered ? Colors.transparent : Theme.of(context).cardColor,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.amber.withOpacity(0.5),
+              width: 1,
+            ),
           ),
           child: const Row(
             children: [
               Icon(Icons.search),
               SizedBox(width: 10),
-              Text("Search street food, stalls, stories..."),
+              Text("Search street food, stalls.."),
             ],
           ),
         ),
@@ -516,8 +697,6 @@ class _HoverSearchBarState extends State<HoverSearchBar> {
     );
   }
 }
-
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -554,6 +733,18 @@ class HomePageContent extends StatelessWidget {
           ),
 
           const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.only(left: 8, bottom: 12),
+            child: Text(
+              "Discover By Mood",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).textTheme.bodyLarge!.color,
+              ),
+            ),
+          ),
+
 
           // FEATURE GRID
           Center(
@@ -570,12 +761,34 @@ class HomePageContent extends StatelessWidget {
                   childAspectRatio: 1.6,
                 ),
                 itemBuilder: (context, index) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: const Center(child: Text("Feature Card")),
+                  final items = [
+                    {
+                      "title": "TRENDING 🔥",
+                      "image": "https://images.unsplash.com/photo-1600891964599-f61ba0e24092",
+                    },
+                    {
+                      "title": "HIGHLY RATED ⭐",
+                      "image": "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe",
+                    },
+                    {
+                      "title": "MOST LOVED 💛",
+                      "image": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38",
+                    },
+                    {
+                      "title": "NEARBY 📍",
+                      "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950",
+                    },
+                  ];
+
+                  final item = items[index];
+
+                  return FeatureCategoryCard(
+                    title: item["title"]!,
+                    image: item["image"]!,
+                    onTap: () {
+                      // TODO: open filtered stalls page later
+                      debugPrint("Clicked: ${item["title"]}");
+                    },
                   );
                 },
               ),
@@ -588,9 +801,229 @@ class HomePageContent extends StatelessWidget {
     );
   }
 }
+class VendorStoriesPageContent extends StatelessWidget {
+  const VendorStoriesPageContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+
+          // MAIN CONTAINER (same width as hero & features)
+          Center(
+            child: FractionallySizedBox(
+              widthFactor: 0.8,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Vendor Stories",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: 3,
+                      gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 20,
+                        mainAxisSpacing: 20,
+                        childAspectRatio: 1.25,
+                      ),
+                      itemBuilder: (context, index) {
+                        return _VendorStoryCard();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+}
+class _VendorStoryCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () {
+        // later: open story
+      },
+      child: Ink(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Theme.of(context).scaffoldBackgroundColor,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // IMAGE
+            Expanded(
+              child: ClipRRect(
+                borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(20)),
+                child: Image.network(
+                  "https://images.unsplash.com/photo-1601050690597-df0568f70950",
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+
+            // TEXT
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    "Spicy Corner",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    "By Ramesh",
+                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class FeatureCategoryCard extends StatefulWidget {
+  final String title;
+  final String image;
+  final VoidCallback onTap;
+
+  const FeatureCategoryCard({
+    super.key,
+    required this.title,
+    required this.image,
+    required this.onTap,
+  });
+
+  @override
+  State<FeatureCategoryCard> createState() => _FeatureCategoryCardState();
+}
+
+class _FeatureCategoryCardState extends State<FeatureCategoryCard> {
+  bool isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => isHovered = true),
+      onExit: (_) => setState(() => isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          scale: isHovered ? 1.05 : 1.0,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                if (isHovered)
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.25),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: widget.onTap,
+                  splashColor: Colors.amber.withOpacity(0.25),
+                  highlightColor: Colors.amber.withOpacity(0.1),
+                  child: Stack(
+                    children: [
+                      // 🖼 IMAGE
+                      Positioned.fill(
+                        child: Image.network(
+                          widget.image,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+
+                      // 🌫 GRADIENT
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withOpacity(0.7),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // 🏷 TEXT
+                      Positioned(
+                        left: 16,
+                        bottom: 14,
+                        child: Text(
+                          widget.title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 class StallsPageContent extends StatelessWidget {
-  StallsPageContent({super.key});
+  final VoidCallback onOpenStall;
+
+  const StallsPageContent({super.key, required this.onOpenStall});
 
   @override
   Widget build(BuildContext context) {
@@ -605,8 +1038,12 @@ class StallsPageContent extends StatelessWidget {
           childAspectRatio: 1.05,
         ),
         itemBuilder: (context, index) {
-          return Container(
-            decoration: BoxDecoration(
+          return InkWell(
+              borderRadius: BorderRadius.circular(20),
+            onTap: onOpenStall,
+            child: Container(
+
+              decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
@@ -657,6 +1094,7 @@ class StallsPageContent extends StatelessWidget {
                 )
               ],
             ),
+              ),
           );
         },
       ),
@@ -666,10 +1104,15 @@ class StallsPageContent extends StatelessWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int streatoPoints = 0;
-  int selectedPage = 0; // 0 = Home, 1 = Stalls
+  int selectedPage = 0;
+// 0 = Home
+// 1 = Stalls
+// 2 = Stall Details
+
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("CURRENT PAGE = $selectedPage");
     return AnimatedBuilder(
       animation: ThemeProvider.of(context),
       builder: (context, _) {
@@ -688,63 +1131,65 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       // LEFT NAV BAR
                       Container(
-                        width: 80,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        child: Row(
+                        width: 64, // 👈 reduced ~20%
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Column(
                           children: [
-                            SizedBox(
-                              width: 60,
+                            // LOGO (NO BACKGROUND)
+                            Container(
+                              height: 44,
+                              width: 44,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.asset(
+                                  "assets/images/streato.png",
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 28),
+
+                            // 🟡 YELLOW STRIP ONLY FOR ICONS
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFB300),
+                                borderRadius: BorderRadius.circular(10), // 👈 as you asked
+                              ),
                               child: Column(
                                 children: [
-                                  // LOGO
-                                  Container(
-                                    height: 56,
-                                    width: 56,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: Image.asset(
-                                        "assets/images/streato.png",
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 40),
-
                                   _NavIcon(
                                     icon: Icons.home,
                                     isActive: selectedPage == 0,
                                     onTap: () => setState(() => selectedPage = 0),
                                   ),
-                                  const SizedBox(height: 28),
+                                  const SizedBox(height: 20),
                                   _NavIcon(
                                     icon: Icons.storefront,
                                     isActive: selectedPage == 1,
                                     onTap: () => setState(() => selectedPage = 1),
                                   ),
-                                  const SizedBox(height: 28),
-                                  _NavIcon(icon: Icons.menu_book),
-                                  const SizedBox(height: 28),
+                                  const SizedBox(height: 20),
+                                  _NavIcon(
+                                    icon: Icons.menu_book,
+                                    isActive: selectedPage == 2,
+                                    onTap: () => setState(() => selectedPage = 2), // Vendor Stories
+                                  ),
+
+                                  const SizedBox(height: 20),
                                   _NavIcon(icon: Icons.star),
-                                  const SizedBox(height: 28),
+                                  const SizedBox(height: 20),
                                   _NavIcon(icon: Icons.map),
                                 ],
                               ),
                             ),
-
-                            // DIVIDER
-                            Container(
-                              width: 0.8,
-                              margin: const EdgeInsets.symmetric(vertical: 8),
-                              color: Colors.amber.withOpacity(0.6),
-                            ),
                           ],
                         ),
                       ),
-
                       // MAIN CONTENT
                       Expanded(
                         child: Center(
@@ -807,13 +1252,34 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ],
                                   ),
                                 ),
-
                                 // PAGE CONTENT
                                 Expanded(
-                                  child: selectedPage == 0
-                                      ? HomePageContent()
-                                      : StallsPageContent(),
+                                  child: () {
+                                    if (selectedPage == 0) {
+                                      return const HomePageContent();
+                                    }
+
+                                    if (selectedPage == 1) {
+                                      return StallsPageContent(
+                                        onOpenStall: () {
+                                          setState(() => selectedPage = 3); // ✅ OPEN STALL DETAILS
+                                        },
+                                      );
+                                    }
+
+                                    if (selectedPage == 2) {
+                                      return const VendorStoriesPageContent(); // ✅ VENDOR STORIES
+                                    }
+
+                                    if (selectedPage == 3) {
+                                      return const FoodStallDetailsContent(); // ✅ STALL DETAILS
+                                    }
+
+                                    return const HomePageContent(); // fallback safety
+                                  }(),
                                 ),
+
+
                               ],
                             ),
                           ),
@@ -855,6 +1321,14 @@ class _NavIconState extends State<_NavIcon> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bool highlight = widget.isActive || isHovered;
 
+    final Color highlightBg = isDark
+        ? const Color(0xFF1C1C1C)  // 🌙 dark mode
+        : Colors.white;           // ☀️ light mode
+
+    final Color iconColor = highlight
+        ? (isDark ? Colors.white : Colors.black)
+        : (isDark ? Colors.black87 : Colors.black87);
+
     return MouseRegion(
       onEnter: (_) => setState(() => isHovered = true),
       onExit: (_) => setState(() => isHovered = false),
@@ -870,7 +1344,6 @@ class _NavIconState extends State<_NavIcon> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // 🍪 BITTEN CIRCLE BACKGROUND
                 if (highlight)
                   ClipPath(
                     clipper: _BiteClipper(),
@@ -878,24 +1351,21 @@ class _NavIconState extends State<_NavIcon> {
                       height: 42,
                       width: 42,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFBF00),
+                        color: highlightBg,
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFFBF00).withOpacity(0.6),
-                            blurRadius: 14,
+                            color: Colors.black.withOpacity(0.25),
+                            blurRadius: 10,
                           ),
                         ],
                       ),
                     ),
                   ),
 
-                // ICON
                 Icon(
                   widget.icon,
                   size: 24,
-                  color: highlight
-                      ? Colors.black
-                      : (isDark ? Colors.white70 : Colors.black54),
+                  color: iconColor,
                 ),
               ],
             ),
@@ -904,6 +1374,7 @@ class _NavIconState extends State<_NavIcon> {
       ),
     );
   }
+
 }
 class _BiteClipper extends CustomClipper<Path> {
   @override
@@ -911,20 +1382,39 @@ class _BiteClipper extends CustomClipper<Path> {
     final Path main = Path()
       ..addOval(Rect.fromLTWH(0, 0, size.width, size.height));
 
-    final Path bite = Path()
-      ..addOval(
-        Rect.fromCircle(
-          center: Offset(size.width * 0.85, size.height * 0.15), // top-right
-          radius: size.width * 0.22, // bite size
-        ),
-      );
+    final double r = size.width * 0.12;
 
-    return Path.combine(PathOperation.difference, main, bite);
+    // Three small bites near top-right
+    final Path bite1 = Path()
+      ..addOval(Rect.fromCircle(
+        center: Offset(size.width * 0.78, size.height * 0.18),
+        radius: r,
+      ));
+
+    final Path bite2 = Path()
+      ..addOval(Rect.fromCircle(
+        center: Offset(size.width * 0.78, size.height * 0.28),
+        radius: r,
+      ));
+
+    final Path bite3 = Path()
+      ..addOval(Rect.fromCircle(
+        center: Offset(size.width * 0.78, size.height * 0.38),
+        radius: r,
+      ));
+
+    Path result = Path.combine(PathOperation.difference, main, bite1);
+    result = Path.combine(PathOperation.difference, result, bite2);
+    result = Path.combine(PathOperation.difference, result, bite3);
+
+    return result;
   }
 
   @override
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
+
+
 
 
 
