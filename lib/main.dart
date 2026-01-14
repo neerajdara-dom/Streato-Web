@@ -526,7 +526,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 class HomePageContent extends StatelessWidget {
-  HomePageContent({super.key});
+  const HomePageContent({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -534,42 +534,51 @@ class HomePageContent extends StatelessWidget {
       child: Column(
         children: [
           // HERO
-          Container(
-            height: 350,
-            margin: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              image: const DecorationImage(
-                image: NetworkImage(
-                  "https://plus.unsplash.com/premium_photo-1695297516142-398762d80f66?w=600&auto=format&fit=crop&q=60",
+          Center(
+            child: FractionallySizedBox(
+              widthFactor: 0.8, // 80% width
+              child: Container(
+                height: 320,
+                margin: const EdgeInsets.only(top: 16, bottom: 16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  image: const DecorationImage(
+                    image: NetworkImage(
+                      "https://plus.unsplash.com/premium_photo-1695297516142-398762d80f66?w=600&auto=format&fit=crop&q=60",
+                    ),
+                    fit: BoxFit.cover,
+                  ),
                 ),
-                fit: BoxFit.cover,
               ),
             ),
           ),
 
+          const SizedBox(height: 20),
+
           // FEATURE GRID
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 6,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 20,
-                mainAxisSpacing: 20,
-                childAspectRatio: 1.6,
+          Center(
+            child: FractionallySizedBox(
+              widthFactor: 0.8,
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 4,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  crossAxisSpacing: 20,
+                  mainAxisSpacing: 20,
+                  childAspectRatio: 1.6,
+                ),
+                itemBuilder: (context, index) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: const Center(child: Text("Feature Card")),
+                  );
+                },
               ),
-              itemBuilder: (context, index) {
-                return Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const Center(child: Text("Feature Card")),
-                );
-              },
             ),
           ),
 
@@ -579,6 +588,7 @@ class HomePageContent extends StatelessWidget {
     );
   }
 }
+
 class StallsPageContent extends StatelessWidget {
   StallsPageContent({super.key});
 
@@ -661,170 +671,168 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-        animation: ThemeProvider.of(context),
-        builder: (context, _) {
-          return Scaffold(
+      animation: ThemeProvider.of(context),
+      builder: (context, _) {
+        return Scaffold(
           body: Stack(
-        children: [
-          // 🌋 BACKGROUND
-          const AnimatedMeshBackground(),
-           DoodleOverlay(),
+            children: [
+              // 🌋 BACKGROUND
+              const AnimatedMeshBackground(),
+              DoodleOverlay(),
 
-          // 🧱 FOREGROUND UI
-          SafeArea(
-            child: Container(
-              color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.18),
-              child: Row(
-                children: [
-                  // LEFT NAV BAR
-                  Container(
-                    width: 90,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 70,
-                          child: Column(
-                            children: [
-                              // LOGO
-                              Container(
-                                height: 56,
-                                width: 56,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Image.asset(
-                                    "assets/images/streato.png",
-                                    fit: BoxFit.cover,
+              // 🧱 FOREGROUND UI
+              SafeArea(
+                child: Container(
+                  color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.18),
+                  child: Row(
+                    children: [
+                      // LEFT NAV BAR
+                      Container(
+                        width: 80,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 60,
+                              child: Column(
+                                children: [
+                                  // LOGO
+                                  Container(
+                                    height: 56,
+                                    width: 56,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Image.asset(
+                                        "assets/images/streato.png",
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 40),
+
+                                  _NavIcon(
+                                    icon: Icons.home,
+                                    isActive: selectedPage == 0,
+                                    onTap: () => setState(() => selectedPage = 0),
+                                  ),
+                                  const SizedBox(height: 28),
+                                  _NavIcon(
+                                    icon: Icons.storefront,
+                                    isActive: selectedPage == 1,
+                                    onTap: () => setState(() => selectedPage = 1),
+                                  ),
+                                  const SizedBox(height: 28),
+                                  _NavIcon(icon: Icons.menu_book),
+                                  const SizedBox(height: 28),
+                                  _NavIcon(icon: Icons.star),
+                                  const SizedBox(height: 28),
+                                  _NavIcon(icon: Icons.map),
+                                ],
+                              ),
+                            ),
+
+                            // DIVIDER
+                            Container(
+                              width: 0.8,
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              color: Colors.amber.withOpacity(0.6),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // MAIN CONTENT
+                      Expanded(
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 1200),
+                            child: Column(
+                              children: [
+                                // TOP BAR
+                                Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Row(
+                                    children: [
+                                      const SizedBox(
+                                        width: 520,
+                                        child: HoverSearchBar(),
+                                      ),
+                                      const Spacer(),
+
+                                      // THEME BUTTON
+                                      GestureDetector(
+                                        onTap: () {
+                                          ThemeProvider.of(context).toggleTheme();
+                                        },
+                                        child: Icon(
+                                          ThemeProvider.of(context).isDark
+                                              ? Icons.dark_mode
+                                              : Icons.light_mode,
+                                          size: 26,
+                                        ),
+                                      ),
+
+                                      const SizedBox(width: 16),
+
+                                      // POINTS
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 14, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context).cardColor,
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Icon(Icons.local_fire_department,
+                                                color: Colors.orange),
+                                            const SizedBox(width: 6),
+                                            Text(streatoPoints.toString()),
+                                          ],
+                                        ),
+                                      ),
+
+                                      const SizedBox(width: 16),
+                                      const Icon(Icons.shopping_cart_outlined, size: 26),
+                                      const SizedBox(width: 16),
+                                      const CircleAvatar(
+                                        radius: 18,
+                                        backgroundColor: Color(0xFFFFBF00),
+                                        child: Icon(Icons.person, color: Colors.black),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ),
 
-                              const SizedBox(height: 40),
-
-                              _NavIcon(
-                                icon: Icons.home,
-                                isActive: selectedPage == 0,
-                                onTap: () => setState(() => selectedPage = 0),
-                              ),
-                              const SizedBox(height: 28),
-                              _NavIcon(
-                                icon: Icons.storefront,
-                                isActive: selectedPage == 1,
-                                onTap: () => setState(() => selectedPage = 1),
-                              ),
-                              const SizedBox(height: 28),
-                              _NavIcon(icon: Icons.menu_book),
-                              const SizedBox(height: 28),
-                              _NavIcon(icon: Icons.star),
-                              const SizedBox(height: 28),
-                              _NavIcon(icon: Icons.map),
-                            ],
+                                // PAGE CONTENT
+                                Expanded(
+                                  child: selectedPage == 0
+                                      ? HomePageContent()
+                                      : StallsPageContent(),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-
-                        // DIVIDER
-                        Container(
-                          width: 1,
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          color: Colors.amber.withOpacity(0.6),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-
-                  // MAIN CONTENT
-                  Expanded(
-                    child: Column(
-                      children: [
-                        // TOP BAR
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: MediaQuery.of(context).size.width * 0.5,
-                                child: const HoverSearchBar(),
-                              ),
-                              const Spacer(),
-
-                              // THEME BUTTON
-                              GestureDetector(
-                                onTap: () {
-                                  ThemeProvider.of(context).toggleTheme();
-                                },
-                                child: Icon(
-                                  ThemeProvider.of(context).isDark
-                                      ? Icons.dark_mode
-                                      : Icons.light_mode,
-                                  size: 26,
-                                ),
-                              ),
-
-                              const SizedBox(width: 16),
-
-                              // POINTS
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).cardColor,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.local_fire_department,
-                                        color: Colors.orange),
-                                    const SizedBox(width: 6),
-                                    Text(streatoPoints.toString()),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(width: 16),
-                              const Icon(Icons.shopping_cart_outlined, size: 26),
-                              const SizedBox(width: 16),
-                              const CircleAvatar(
-                                radius: 18,
-                                backgroundColor: Color(0xFFFFBF00),
-                                child:
-                                Icon(Icons.person, color: Colors.black),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // DIVIDER
-                        Container(
-                          height: 1,
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          color: Colors.amber.withOpacity(0.6),
-                        ),
-
-                        // PAGE CONTENT
-                        Expanded(
-                          child: selectedPage == 0
-                              ?  HomePageContent()
-                              :  StallsPageContent(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
-          );
-        },
+        );
+      },
     );
   }
+
 }
 
-class _NavIcon extends StatelessWidget {
+class _NavIcon extends StatefulWidget {
   final IconData icon;
   final bool isActive;
   final VoidCallback? onTap;
@@ -836,28 +844,88 @@ class _NavIcon extends StatelessWidget {
   });
 
   @override
+  State<_NavIcon> createState() => _NavIconState();
+}
+
+class _NavIconState extends State<_NavIcon> {
+  bool isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bool highlight = widget.isActive || isHovered;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 44,
-        width: 44,
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFFFFBF00) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(
-          icon,
-          size: 24,
-          color: isActive
-              ? Colors.black
-              : (isDark ? Colors.white70 : Colors.black54),
+    return MouseRegion(
+      onEnter: (_) => setState(() => isHovered = true),
+      onExit: (_) => setState(() => isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: highlight ? 1.1 : 1.0,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          child: SizedBox(
+            height: 46,
+            width: 46,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // 🍪 BITTEN CIRCLE BACKGROUND
+                if (highlight)
+                  ClipPath(
+                    clipper: _BiteClipper(),
+                    child: Container(
+                      height: 42,
+                      width: 42,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFBF00),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFFBF00).withOpacity(0.6),
+                            blurRadius: 14,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // ICON
+                Icon(
+                  widget.icon,
+                  size: 24,
+                  color: highlight
+                      ? Colors.black
+                      : (isDark ? Colors.white70 : Colors.black54),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
+class _BiteClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final Path main = Path()
+      ..addOval(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final Path bite = Path()
+      ..addOval(
+        Rect.fromCircle(
+          center: Offset(size.width * 0.85, size.height * 0.15), // top-right
+          radius: size.width * 0.22, // bite size
+        ),
+      );
+
+    return Path.combine(PathOperation.difference, main, bite);
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+
 
 
