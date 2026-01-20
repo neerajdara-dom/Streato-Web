@@ -1,5 +1,24 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'auth_gate.dart';
+import 'signup_screen.dart';
+import '../services/firestore_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'models/vendor.dart';
+import 'services/vendor_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
+import '../services/location_service.dart';
+import '../utils/distance_utils.dart';
+import '../services/cart_service.dart';
+import 'services/gemini_service.dart';
+
+
+
+
 class Stall {
   final String name;
   final double rating;
@@ -81,7 +100,8 @@ class _StallImagesGrid extends StatelessWidget {
 }
 
 class FoodStallDetailsContent extends StatelessWidget {
-  const FoodStallDetailsContent({super.key});
+  final Vendor vendor;
+  const FoodStallDetailsContent({super.key, required this.vendor});
 
   @override
   Widget build(BuildContext context) {
@@ -99,21 +119,20 @@ class FoodStallDetailsContent extends StatelessWidget {
                   // 🏷️ TITLE + RATING
                   Row(
                     children: [
-                      const Text(
-                        "Spicy Corner",
-                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                      Text(
+                        vendor.name,
+                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(width: 12),
                       Container(
-                        padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.green,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text(
-                          "⭐ 4.2",
-                          style: TextStyle(color: Colors.white),
+                        child: Text(
+                          "⭐ ${vendor.rating}",
+                          style: const TextStyle(color: Colors.white),
                         ),
                       )
                     ],
@@ -121,12 +140,20 @@ class FoodStallDetailsContent extends StatelessWidget {
 
                   const SizedBox(height: 20),
 
-                  // 🖼️ IMAGE GRID
-                  _StallImagesGrid(),
+                  // 🖼️ IMAGE
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.network(
+                      vendor.image,
+                      height: 260,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
 
                   const SizedBox(height: 30),
 
-                  // 📋 MENU SECTION
+                  // 📋 MENU
                   const Text(
                     "Menu",
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
@@ -138,30 +165,12 @@ class FoodStallDetailsContent extends StatelessWidget {
                     color: Colors.amber,
                   ),
 
-                  // 🔍 SEARCH
-                  Container(
-                    height: 44,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).cardColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.search),
-                        SizedBox(width: 8),
-                        Text("Search in menu..."),
-                      ],
-                    ),
-                  ),
-
                   const SizedBox(height: 20),
 
-                  // 🍔 FOOD ITEMS
-                  _FoodItem("Samosa", 20),
-                  _FoodItem("Pav Bhaji", 60),
-                  _FoodItem("Dosa", 50),
-                  _FoodItem("Noodles", 70),
+                  // 🍔 FOOD ITEMS FROM FIRESTORE
+                  ...vendor.menu.map((item) {
+                    return _foodItem(context, item.name, item.price);
+                  }).toList(),
 
                   const SizedBox(height: 40),
                 ],
@@ -173,7 +182,8 @@ class FoodStallDetailsContent extends StatelessWidget {
     );
   }
 
-  Widget _FoodItem(String name, int price) {
+  // ✅ FIXED: context passed + price is int
+  Widget _foodItem(BuildContext context, String name, int price) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -183,14 +193,30 @@ class FoodStallDetailsContent extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text(name, style: const TextStyle(fontSize: 16)),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(name, style: const TextStyle(fontSize: 16)),
+              const SizedBox(height: 4),
+              Text("₹$price", style: const TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
           const Spacer(),
-          Text("₹$price", style: const TextStyle(fontWeight: FontWeight.bold)),
+          ElevatedButton(
+            onPressed: () {
+              // TODO: CartService.addItem(name, price);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("$name added to cart")),
+              );
+            },
+            child: const Text("ADD"),
+          )
         ],
       ),
     );
   }
 }
+
 class AnimatedMeshBackground extends StatefulWidget {
   const AnimatedMeshBackground({super.key});
 
@@ -446,7 +472,13 @@ class ThemeController extends ChangeNotifier {
   }
 }
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   final themeController = ThemeController();
 
   runApp(
@@ -456,6 +488,8 @@ void main() {
     ),
   );
 }
+
+
 
 
 class StreatoApp extends StatelessWidget {
@@ -494,7 +528,7 @@ class StreatoApp extends StatelessWidget {
             ),
           ),
 
-          home: const SplashScreen(),
+            home: const AuthGate(),
         );
 
 
@@ -571,8 +605,65 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  bool loading = false;
+
+  Future<void> login() async {
+    try {
+      setState(() => loading = true);
+
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Login failed: $e")),
+      );
+    } finally {
+      setState(() => loading = false);
+    }
+  }
+
+  Future<void> signup() async {
+    try {
+      setState(() => loading = true);
+
+      // 1. Create account
+      UserCredential cred = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      // 2. Save user to Firestore
+      await FirebaseFirestore.instance
+          .collection("users")
+          .doc(cred.user!.uid)
+          .set({
+        "email": emailController.text.trim(),
+        "createdAt": FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Signup failed: $e")),
+      );
+    } finally {
+      setState(() => loading = false);
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -589,13 +680,12 @@ class LoginScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              const Text(
-                "Discover local street food like never before.",
-                style: TextStyle(color: Colors.grey),
-              ),
+              const Text("Login or create account"),
+
               const SizedBox(height: 40),
 
               TextField(
+                controller: emailController,
                 decoration: InputDecoration(
                   labelText: "Email",
                   border: OutlineInputBorder(
@@ -606,6 +696,7 @@ class LoginScreen extends StatelessWidget {
               const SizedBox(height: 20),
 
               TextField(
+                controller: passwordController,
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: "Password",
@@ -621,33 +712,29 @@ class LoginScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).cardColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
+                  onPressed: loading ? null : login,
+                  child: loading
+                      ? const CircularProgressIndicator()
+                      : const Text("Login"),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: OutlinedButton(
                   onPressed: () {
-                    Navigator.pushReplacement(
+                    Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      MaterialPageRoute(builder: (_) => SignupScreen()),
                     );
                   },
-                  child: const Text(
-                    "Login",
-                    style: TextStyle(fontSize: 18, color: Colors.black),
-                  ),
+                  child: const Text("Create Account"),
                 ),
               ),
 
-              const SizedBox(height: 20),
-
-              Center(
-                child: TextButton(
-                  onPressed: () {},
-                  child: const Text("Create new account"),
-                ),
-              ),
             ],
           ),
         ),
@@ -655,11 +742,14 @@ class LoginScreen extends StatelessWidget {
     );
   }
 }
+
 class HoverSearchBar extends StatefulWidget {
   const HoverSearchBar({super.key});
 
+
   @override
   State<HoverSearchBar> createState() => _HoverSearchBarState();
+
 }
 
 class _HoverSearchBarState extends State<HoverSearchBar> {
@@ -713,11 +803,32 @@ class HomePageContent extends StatelessWidget {
       child: Column(
         children: [
           // HERO
+          // SEARCH BAR
+          const SizedBox(height: 16),
+
           Center(
             child: FractionallySizedBox(
-              widthFactor: 0.8, // 80% width
+              widthFactor: 0.8,
+              child: GestureDetector(
+                onTap: () {
+                  // call search dialog
+                  final homeState = context.findAncestorStateOfType<_HomeScreenState>();
+                  homeState?.showSearchDialog(context);
+                },
+                child: const HoverSearchBar(),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+// HERO
+          Center(
+            child: FractionallySizedBox(
+              widthFactor: 0.8,
               child: Container(
                 height: 320,
+
                 margin: const EdgeInsets.only(top: 16, bottom: 16),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
@@ -1020,84 +1131,242 @@ class _FeatureCategoryCardState extends State<FeatureCategoryCard> {
 }
 
 
-class StallsPageContent extends StatelessWidget {
-  final VoidCallback onOpenStall;
+
+class StallsPageContent extends StatefulWidget {
+  final Function(Vendor vendor) onOpenStall;
+
 
   const StallsPageContent({super.key, required this.onOpenStall});
 
   @override
+  State<StallsPageContent> createState() => _StallsPageContentState();
+}
+
+class _StallsPageContentState extends State<StallsPageContent> {
+  Position? userPosition;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocation();
+  }
+
+  Future<void> _loadLocation() async {
+    final pos = await LocationService.getCurrentLocation();
+    setState(() => userPosition = pos);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: GridView.builder(
-        itemCount: 12,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4, // 4 stalls per row
-          crossAxisSpacing: 20,
-          mainAxisSpacing: 20,
-          childAspectRatio: 1.05,
-        ),
-        itemBuilder: (context, index) {
-          return InkWell(
-              borderRadius: BorderRadius.circular(20),
-            onTap: onOpenStall,
-            child: Container(
+    if (userPosition == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-              decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 10,
-                ),
-              ],
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection("vendors").snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final docs = snapshot.data!.docs;
+
+        if (docs.isEmpty) {
+          return const Center(child: Text("No stalls found"));
+        }
+
+        // 🧠 Map + calculate distance
+        final vendors = docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return Vendor.fromFirestore(doc.id, data);
+        }).toList();
+
+
+        // 🔥 Sort by nearest
+        vendors.sort((a, b) {
+          final da = distanceInKm(
+            userPosition!.latitude,
+            userPosition!.longitude,
+            a.lat,
+            a.lon,
+          );
+
+          final db = distanceInKm(
+            userPosition!.latitude,
+            userPosition!.longitude,
+            b.lat,
+            b.lon,
+          );
+
+          return da.compareTo(db);
+        });
+
+
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: GridView.builder(
+            itemCount: vendors.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              crossAxisSpacing: 20,
+              mainAxisSpacing: 20,
+              childAspectRatio: 1.05,
             ),
-            child: Column(
-              children: [
-                // IMAGE
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                    child: Image.network(
-                      "https://images.unsplash.com/photo-1601050690597-df0568f70950",
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
+            itemBuilder: (context, index) {
+              final vendor = vendors[index];
 
-                // INFO
-                Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              final dist = distanceInKm(
+                userPosition!.latitude,
+                userPosition!.longitude,
+                vendor.lat,
+                vendor.lon,
+              );
+
+              return _StallCard(
+                name: vendor.name,
+                image: vendor.image,
+                rating: vendor.rating,
+                distance: dist,
+                onTap: () {
+                  widget.onOpenStall(vendor); // ✅ REAL VENDOR OBJECT
+                },
+              );
+            },
+          ),
+        );
+
+      },
+    );
+  }
+}
+class _StallCard extends StatelessWidget {
+  final String name;
+  final String image;
+  final double rating;
+  final double distance;
+  final VoidCallback onTap;
+
+  const _StallCard({
+    required this.name,
+    required this.image,
+    required this.rating,
+    required this.distance,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(20)),
+                child: Image.network(
+                  image,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Row(
                     children: [
-                      const Text(
-                        "Spicy Corner",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: const [
-                          Icon(Icons.star, size: 16, color: Colors.amber),
-                          SizedBox(width: 4),
-                          Text("4.3"),
-                          Spacer(),
-                          Icon(Icons.location_on, size: 16),
-                          SizedBox(width: 2),
-                          Text("1.2 km"),
-                        ],
-                      )
+                      const Icon(Icons.star, size: 16, color: Colors.amber),
+                      const SizedBox(width: 4),
+                      Text(rating.toStringAsFixed(1)),
+                      const Spacer(),
+                      const Icon(Icons.location_on, size: 16),
+                      const SizedBox(width: 2),
+                      Text("${distance.toStringAsFixed(2)} km"),
                     ],
-                  ),
+                  )
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+class VendorCard extends StatelessWidget {
+  final Vendor vendor;
+  final VoidCallback onTap;
+
+  const VendorCard({super.key, required this.vendor, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+        decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              child: Image.network(
+                vendor.image,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(vendor.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.star, size: 16, color: Colors.amber),
+                    const SizedBox(width: 4),
+                    Text(vendor.rating.toString()),
+                  ],
                 )
               ],
             ),
-              ),
-          );
-        },
+          ),
+        ],
       ),
+        ),
     );
   }
 }
@@ -1105,6 +1374,113 @@ class StallsPageContent extends StatelessWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int streatoPoints = 0;
   int selectedPage = 0;
+  Vendor? selectedVendor;
+  List<Vendor> searchResults = [];
+  bool isSearching = false;
+  Future<void> onSearch(String text) async {
+    setState(() {
+      isSearching = true;
+    });
+
+    print("SEARCH TEXT = $text");
+
+    final aiFilter = await GeminiService.parseQuery(text);
+
+    print("AI FILTER = $aiFilter");
+
+    final food = aiFilter["food"]?.toString().toLowerCase().trim();
+
+    final maxPrice = aiFilter["max_price"] == null
+        ? null
+        : double.tryParse(aiFilter["max_price"].toString());
+
+    print("FOOD = $food");
+    print("MAX PRICE = $maxPrice");
+
+    final vendors = await VendorService.getAllVendors();
+
+    print("TOTAL VENDORS FROM FIRESTORE = ${vendors.length}");
+
+    for (final v in vendors) {
+      print("VENDOR = ${v.name}");
+      for (final item in v.menu) {
+        print("  ITEM = ${item.name}  PRICE = ${item.price}");
+      }
+    }
+
+    final results = vendors.where((v) {
+      for (final item in v.menu) {
+        final matchesFood = food == null ||
+            item.name.toLowerCase().contains(food.toString().toLowerCase());
+
+        final matchesPrice = maxPrice == null || item.price <= maxPrice;
+
+        if (matchesFood && matchesPrice) {
+          return true;
+        }
+      }
+      return false;
+    }).toList();
+
+
+
+    print("RESULT COUNT = ${results.length}");
+
+    setState(() {
+      searchResults = results;
+      selectedPage = 4;
+      isSearching = false;
+    });
+    print("TOTAL VENDORS = ${vendors.length}");
+
+    for (var v in vendors) {
+      print("VENDOR: ${v.name}  MENU COUNT = ${v.menu.length}");
+    }
+
+  }
+
+
+  void showSearchDialog(BuildContext context) {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text("AI Search"),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: "e.g. pani puri under 20 rs",
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final text = controller.text.trim();
+                Navigator.pop(context);
+
+                if (text.isNotEmpty) {
+                  onSearch(text); // 🔥 YOUR GEMINI FUNCTION
+                }
+              },
+              child: const Text("Search"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
+
+
+
 // 0 = Home
 // 1 = Stalls
 // 2 = Stall Details
@@ -1202,10 +1578,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   padding: const EdgeInsets.all(16.0),
                                   child: Row(
                                     children: [
-                                      const SizedBox(
-                                        width: 520,
-                                        child: HoverSearchBar(),
-                                      ),
+
                                       const Spacer(),
 
                                       // THEME BUTTON
@@ -1242,7 +1615,28 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
 
                                       const SizedBox(width: 16),
-                                      const Icon(Icons.shopping_cart_outlined, size: 26),
+                                      Stack(
+                                        children: [
+                                          const Icon(Icons.shopping_cart_outlined, size: 26),
+                                          if (CartService.totalItems > 0)
+                                            Positioned(
+                                              right: 0,
+                                              top: 0,
+                                              child: Container(
+                                                padding: const EdgeInsets.all(4),
+                                                decoration: const BoxDecoration(
+                                                  color: Colors.red,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Text(
+                                                  CartService.totalItems.toString(),
+                                                  style: const TextStyle(color: Colors.white, fontSize: 10),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+
                                       const SizedBox(width: 16),
                                       const CircleAvatar(
                                         radius: 18,
@@ -1261,10 +1655,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
                                     if (selectedPage == 1) {
                                       return StallsPageContent(
-                                        onOpenStall: () {
-                                          setState(() => selectedPage = 3); // ✅ OPEN STALL DETAILS
+                                        onOpenStall: (vendor) {
+                                          setState(() {
+                                            selectedVendor = vendor;
+                                            selectedPage = 3;
+                                          });
                                         },
                                       );
+
                                     }
 
                                     if (selectedPage == 2) {
@@ -1272,8 +1670,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                     }
 
                                     if (selectedPage == 3) {
-                                      return const FoodStallDetailsContent(); // ✅ STALL DETAILS
+                                      return FoodStallDetailsContent(vendor: selectedVendor!);
+                                      // ✅ STALL DETAILS
                                     }
+                                    if (selectedPage == 4) {
+                                      return SearchResultsPage(
+                                        results: searchResults,
+                                        onOpenStall: (vendor) {
+                                          setState(() {
+                                            selectedVendor = vendor;
+                                            selectedPage = 3; // open details page
+                                          });
+                                        },
+                                      );
+                                    }
+
 
                                     return const HomePageContent(); // fallback safety
                                   }(),
@@ -1297,6 +1708,52 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
 }
+class SearchResultsPage extends StatelessWidget {
+  final List<Vendor> results;
+  final Function(Vendor) onOpenStall;
+
+  const SearchResultsPage({
+    super.key,
+    required this.results,
+    required this.onOpenStall,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (results.isEmpty) {
+      return const Center(child: Text("No stalls match your search"));
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: GridView.builder(
+        itemCount: results.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          crossAxisSpacing: 20,
+          mainAxisSpacing: 20,
+          childAspectRatio: 1.05,
+        ),
+        itemBuilder: (context, index) {
+          final vendor = results[index];
+
+          return _StallCard(
+            name: vendor.name,
+            image: vendor.image,
+            rating: vendor.rating,
+            distance: 0, // you can compute later
+            onTap: () {
+              onOpenStall(vendor); // 🔥 OPEN DETAILS PAGE
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+
+
 
 class _NavIcon extends StatefulWidget {
   final IconData icon;
