@@ -15,6 +15,8 @@ import '../services/location_service.dart';
 import '../utils/distance_utils.dart';
 import '../services/cart_service.dart';
 import 'services/gemini_service.dart';
+import '../widgets/hero_video.dart';
+
 
 
 
@@ -140,7 +142,6 @@ class FoodStallDetailsContent extends StatelessWidget {
 
                   const SizedBox(height: 20),
 
-                  // 🖼️ IMAGE
                   ClipRRect(
                     borderRadius: BorderRadius.circular(20),
                     child: Image.network(
@@ -802,46 +803,17 @@ class HomePageContent extends StatelessWidget {
     return SingleChildScrollView(
       child: Column(
         children: [
-          // HERO
-          // SEARCH BAR
-          const SizedBox(height: 16),
-
-          Center(
-            child: FractionallySizedBox(
-              widthFactor: 0.8,
-              child: GestureDetector(
-                onTap: () {
-                  // call search dialog
-                  final homeState = context.findAncestorStateOfType<_HomeScreenState>();
-                  homeState?.showSearchDialog(context);
-                },
-                child: const HoverSearchBar(),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
 // HERO
           Center(
             child: FractionallySizedBox(
               widthFactor: 0.8,
-              child: Container(
-                height: 320,
-
-                margin: const EdgeInsets.only(top: 16, bottom: 16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  image: const DecorationImage(
-                    image: NetworkImage(
-                      "https://plus.unsplash.com/premium_photo-1695297516142-398762d80f66?w=600&auto=format&fit=crop&q=60",
-                    ),
-                    fit: BoxFit.cover,
-                  ),
-                ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: const HeroVideo(),   // 👈 VIDEO HERE
               ),
             ),
           ),
+
 
           const SizedBox(height: 20),
           Padding(
@@ -1511,21 +1483,34 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         child: Column(
                           children: [
-                            // LOGO (NO BACKGROUND)
-                            Container(
-                              height: 44,
-                              width: 44,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: Image.asset(
-                                  "assets/images/streato.png",
-                                  fit: BoxFit.cover,
+                            // 🏷 STREATO WORDMARK
+                            Padding(
+                              padding: const EdgeInsets.only(left: 24), // 👈 moves ~7% right from edge
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: SizedBox(
+                                  width: 180, // enough for the word in one line
+                                  child: Text(
+                                    "Streato",
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    overflow: TextOverflow.visible,
+                                    style: TextStyle(
+                                      fontFamily: "Blackbones",
+                                      fontSize: 40,
+                                      fontWeight: FontWeight.w400,
+                                      height: 1.0, // 👈 prevents vertical misalignment
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? const Color(0xFFFFB300)
+                                          : Colors.black,
+                                    ),
+                                  ),
                                 ),
+
                               ),
                             ),
+
+
 
                             const SizedBox(height: 28),
 
@@ -1534,7 +1519,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFFB300),
-                                borderRadius: BorderRadius.circular(10), // 👈 as you asked
+                                borderRadius: BorderRadius.circular(18), // 👈 as you asked
                               ),
                               child: Column(
                                 children: [
@@ -1576,76 +1561,95 @@ class _HomeScreenState extends State<HomeScreen> {
                                 // TOP BAR
                                 Padding(
                                   padding: const EdgeInsets.all(16.0),
-                                  child: Row(
-                                    children: [
-
-                                      const Spacer(),
-
-                                      // THEME BUTTON
-                                      GestureDetector(
-                                        onTap: () {
-                                          ThemeProvider.of(context).toggleTheme();
-                                        },
-                                        child: Icon(
-                                          ThemeProvider.of(context).isDark
-                                              ? Icons.dark_mode
-                                              : Icons.light_mode,
-                                          size: 26,
-                                        ),
-                                      ),
-
-                                      const SizedBox(width: 16),
-
-                                      // POINTS
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 14, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(context).cardColor,
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            const Icon(Icons.local_fire_department,
-                                                color: Colors.orange),
-                                            const SizedBox(width: 6),
-                                            Text(streatoPoints.toString()),
-                                          ],
-                                        ),
-                                      ),
-
-                                      const SizedBox(width: 16),
-                                      Stack(
+                                  child: Center(
+                                    child: FractionallySizedBox(
+                                      widthFactor: 0.8, // SAME AS HERO
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.center,
                                         children: [
-                                          const Icon(Icons.shopping_cart_outlined, size: 26),
-                                          if (CartService.totalItems > 0)
-                                            Positioned(
-                                              right: 0,
-                                              top: 0,
-                                              child: Container(
-                                                padding: const EdgeInsets.all(4),
-                                                decoration: const BoxDecoration(
-                                                  color: Colors.red,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: Text(
-                                                  CartService.totalItems.toString(),
-                                                  style: const TextStyle(color: Colors.white, fontSize: 10),
-                                                ),
-                                              ),
+                                          // 🔍 SEARCH BAR
+                                          SizedBox(
+                                            width: 420, // half width as you wanted
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                showSearchDialog(context);
+                                              },
+                                              child: const HoverSearchBar(),
                                             ),
+                                          ),
+
+                                          const Spacer(),
+
+                                          // 🌙 THEME BUTTON
+                                          GestureDetector(
+                                            onTap: () {
+                                              ThemeProvider.of(context).toggleTheme();
+                                            },
+                                            child: Icon(
+                                              ThemeProvider.of(context).isDark
+                                                  ? Icons.dark_mode
+                                                  : Icons.light_mode,
+                                              size: 26,
+                                            ),
+                                          ),
+
+                                          const SizedBox(width: 16),
+
+                                          // 🔥 POINTS
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                            decoration: BoxDecoration(
+                                              color: Theme.of(context).cardColor,
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.local_fire_department, color: Colors.orange),
+                                                const SizedBox(width: 6),
+                                                Text(streatoPoints.toString()),
+                                              ],
+                                            ),
+                                          ),
+
+                                          const SizedBox(width: 16),
+
+                                          // 🛒 CART
+                                          Stack(
+                                            children: [
+                                              const Icon(Icons.shopping_cart_outlined, size: 26),
+                                              if (CartService.totalItems > 0)
+                                                Positioned(
+                                                  right: 0,
+                                                  top: 0,
+                                                  child: Container(
+                                                    padding: const EdgeInsets.all(4),
+                                                    decoration: const BoxDecoration(
+                                                      color: Colors.red,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: Text(
+                                                      CartService.totalItems.toString(),
+                                                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+
+                                          const SizedBox(width: 16),
+
+                                          const CircleAvatar(
+                                            radius: 18,
+                                            backgroundColor: Color(0xFFFFBF00),
+                                            child: Icon(Icons.person, color: Colors.black),
+                                          ),
                                         ],
                                       ),
-
-                                      const SizedBox(width: 16),
-                                      const CircleAvatar(
-                                        radius: 18,
-                                        backgroundColor: Color(0xFFFFBF00),
-                                        child: Icon(Icons.person, color: Colors.black),
-                                      ),
-                                    ],
+                                    ),
                                   ),
                                 ),
+
+
                                 // PAGE CONTENT
                                 Expanded(
                                   child: () {
