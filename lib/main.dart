@@ -16,6 +16,7 @@ import '../utils/distance_utils.dart';
 import '../services/cart_service.dart';
 import 'services/gemini_service.dart';
 import '../widgets/hero_video.dart';
+import 'dart:ui';
 
 
 
@@ -616,8 +617,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  bool loading = false;
 
+  bool loading = false;
   Future<void> login() async {
     try {
       setState(() => loading = true);
@@ -626,6 +627,8 @@ class _LoginScreenState extends State<LoginScreen> {
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
+
+      // ✅ SUCCESS: AuthGate will automatically redirect to HomeScreen
 
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -636,113 +639,170 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> signup() async {
-    try {
-      setState(() => loading = true);
-
-      // 1. Create account
-      UserCredential cred = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
-
-      // 2. Save user to Firestore
-      await FirebaseFirestore.instance
-          .collection("users")
-          .doc(cred.user!.uid)
-          .set({
-        "email": emailController.text.trim(),
-        "createdAt": FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Signup failed: $e")),
-      );
-    } finally {
-      setState(() => loading = false);
-    }
-  }
-
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 40),
-              const Text(
-                "Welcome to Streato 👋",
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text("Login or create account"),
-
-              const SizedBox(height: 40),
-
-              TextField(
-                controller: emailController,
-                decoration: InputDecoration(
-                  labelText: "Email",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: "Password",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 30),
-
-              SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: ElevatedButton(
-                  onPressed: loading ? null : login,
-                  child: loading
-                      ? const CircularProgressIndicator()
-                      : const Text("Login"),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => SignupScreen()),
-                    );
-                  },
-                  child: const Text("Create Account"),
-                ),
-              ),
-
-            ],
+      body: Stack(
+        children: [
+          // 🌄 BACKGROUND IMAGE
+          Positioned.fill(
+            child: Image.asset(
+              "assets/images/sky.png",
+              fit: BoxFit.cover,
+            ),
           ),
+
+          // 🌫 DARK OVERLAY (for contrast)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withOpacity(0.25),
+            ),
+          ),
+          Positioned(
+            top: 24,
+            left: 24,
+            child: Text(
+              "Streato",
+              style: TextStyle(
+                fontFamily: "Blackbones",
+                fontSize: 42,
+                fontWeight: FontWeight.w400,
+                color: Colors.white,
+              ),
+            ),
+          ),
+
+
+          // 🧊 CENTER GLASS CARD
+          Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                child: Container(
+                  width: 420,
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.35),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 🏷 LOGO
+                      const Icon(Icons.storefront, size: 48, color: Colors.white),
+                      const SizedBox(height: 12),
+
+                      const Text(
+                        "Sign in with email",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      const Text(
+                        "Make a new doc to bring your words, data,\nand teams together.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white70),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // 📧 EMAIL
+                      _glassField(
+                        controller: emailController,
+                        hint: "Email",
+                        icon: Icons.email_outlined,
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // 🔒 PASSWORD
+                      _glassField(
+                        controller: passwordController,
+                        hint: "Password",
+                        icon: Icons.lock_outline,
+                        isPassword: true,
+                      ),
+                      //LOGIN BUTTON
+                      const SizedBox(height: 24),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: loading ? null : () => login(), // ✅ THIS IS THE FIX
+                          child: loading
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : const Text("Get Started"),
+                        ),
+                      ),
+
+
+                      const SizedBox(height: 16),
+
+                      // 🔹 SOCIAL ICONS
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.g_mobiledata, color: Colors.white, size: 34),
+                          SizedBox(width: 12),
+                          Icon(Icons.facebook, color: Colors.white),
+                          SizedBox(width: 12),
+                          Icon(Icons.apple, color: Colors.white),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _glassField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool isPassword = false,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: isPassword,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Colors.white70),
+        prefixIcon: Icon(icon, color: Colors.white),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
         ),
       ),
     );
   }
 }
+
 
 class HoverSearchBar extends StatefulWidget {
   const HoverSearchBar({super.key});
