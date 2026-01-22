@@ -695,7 +695,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // 🏷 LOGO
-                      const Icon(Icons.storefront, size: 48, color: Colors.white),
+                      const Icon(Icons.fastfood, size: 48, color: Colors.white),
                       const SizedBox(height: 12),
 
                       const Text(
@@ -710,7 +710,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 6),
 
                       const Text(
-                        "Make a new doc to bring your words, data,\nand teams together.",
+                        "Your ticket to a flavor-filled heaven and street food paradise.\nWelcome to Streato",
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.white70),
                       ),
