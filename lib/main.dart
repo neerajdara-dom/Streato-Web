@@ -1357,10 +1357,54 @@ class _HomeScreenState extends State<HomeScreen> {
     print("SEARCH TEXT = $text");
 
     final aiFilter = await GeminiService.parseQuery(text);
+    final vendors = await VendorService.getAllVendors();
+
+    // 🛟 FALLBACK IF GEMINI FAILS
+    if (aiFilter.isEmpty) {
+      print("⚠️ Gemini failed, using strict menu search");
+
+      final raw = text.toLowerCase().trim();
+
+      final results = vendors.where((v) {
+        for (final item in v.menu) {
+          final itemName = item.name.toLowerCase().trim();
+          if (itemName.contains(raw)) {
+            return true;
+          }
+        }
+        return false;
+      }).toList();
+
+
+      setState(() {
+        searchResults = results;
+        selectedPage = 4;
+        isSearching = false;
+      });
+
+      return;
+    }
+
+
+
 
     print("AI FILTER = $aiFilter");
 
     final food = aiFilter["food"]?.toString().toLowerCase().trim();
+    if (food == null || food.isEmpty) {
+      setState(() {
+        searchResults = [];
+        selectedPage = 4;
+        isSearching = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please search like: dosa, idli, paneer, etc")),
+      );
+
+      return; // ⛔ STOP SEARCH COMPLETELY
+    }
+
 
     final maxPrice = aiFilter["max_price"] == null
         ? null
@@ -1368,8 +1412,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     print("FOOD = $food");
     print("MAX PRICE = $maxPrice");
-
-    final vendors = await VendorService.getAllVendors();
 
     print("TOTAL VENDORS FROM FIRESTORE = ${vendors.length}");
 
@@ -1381,18 +1423,31 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final results = vendors.where((v) {
+      bool foundValidItem = false;
+
       for (final item in v.menu) {
-        final matchesFood = food == null ||
-            item.name.toLowerCase().contains(food.toString().toLowerCase());
+        final itemName = item.name.toLowerCase().trim();
 
-        final matchesPrice = maxPrice == null || item.price <= maxPrice;
-
-        if (matchesFood && matchesPrice) {
-          return true;
+        // 1️⃣ FOOD MUST MATCH
+        if (!itemName.contains(food)) {
+          continue;
         }
+
+        // 2️⃣ PRICE MUST MATCH
+        if (maxPrice != null && item.price > maxPrice) {
+          continue;
+        }
+
+        // ✅ Valid item found
+        foundValidItem = true;
+        break;
       }
-      return false;
+
+      return foundValidItem;
     }).toList();
+
+
+
 
 
 
@@ -1408,6 +1463,7 @@ class _HomeScreenState extends State<HomeScreen> {
     for (var v in vendors) {
       print("VENDOR: ${v.name}  MENU COUNT = ${v.menu.length}");
     }
+
 
   }
 
@@ -1479,7 +1535,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       // LEFT NAV BAR
                       Container(
-                        width: 64, // 👈 reduced ~20%
+                        width: 100, // 👈 reduced ~20%
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         child: Column(
                           children: [
@@ -1509,45 +1565,44 @@ class _HomeScreenState extends State<HomeScreen> {
 
                               ),
                             ),
-
-
-
                             const SizedBox(height: 28),
-
                             // 🟡 YELLOW STRIP ONLY FOR ICONS
-                            Container(
-                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFB300),
-                                borderRadius: BorderRadius.circular(18), // 👈 as you asked
-                              ),
-                              child: Column(
-                                children: [
-                                  _NavIcon(
-                                    icon: Icons.home,
-                                    isActive: selectedPage == 0,
-                                    onTap: () => setState(() => selectedPage = 0),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  _NavIcon(
-                                    icon: Icons.storefront,
-                                    isActive: selectedPage == 1,
-                                    onTap: () => setState(() => selectedPage = 1),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  _NavIcon(
-                                    icon: Icons.menu_book,
-                                    isActive: selectedPage == 2,
-                                    onTap: () => setState(() => selectedPage = 2), // Vendor Stories
-                                  ),
-
-                                  const SizedBox(height: 20),
-                                  _NavIcon(icon: Icons.star),
-                                  const SizedBox(height: 20),
-                                  _NavIcon(icon: Icons.map),
-                                ],
+                            Padding(
+                              padding: const EdgeInsets.only(left: 24), // ✅ SAME AS STREATO
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFB300),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: Column(
+                                  children: [
+                                    _NavIcon(
+                                      icon: Icons.home,
+                                      isActive: selectedPage == 0,
+                                      onTap: () => setState(() => selectedPage = 0),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    _NavIcon(
+                                      icon: Icons.storefront,
+                                      isActive: selectedPage == 1,
+                                      onTap: () => setState(() => selectedPage = 1),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    _NavIcon(
+                                      icon: Icons.menu_book,
+                                      isActive: selectedPage == 2,
+                                      onTap: () => setState(() => selectedPage = 2),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    _NavIcon(icon: Icons.star),
+                                    const SizedBox(height: 20),
+                                    _NavIcon(icon: Icons.map),
+                                  ],
+                                ),
                               ),
                             ),
+
                           ],
                         ),
                       ),
