@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:streato_app/pages/cart_page.dart';
+import 'package:streato_app/pages/map_page.dart';
 import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_gate.dart';
@@ -9,7 +11,6 @@ import '../services/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'models/vendor.dart';
 import 'services/vendor_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/location_service.dart';
 import '../utils/distance_utils.dart';
@@ -17,8 +18,21 @@ import '../services/cart_service.dart';
 import 'services/gemini_service.dart';
 import '../widgets/hero_video.dart';
 import 'dart:ui';
+import 'pages/map_page.dart';
 
+class StaticDoodleBackground extends StatelessWidget {
+  const StaticDoodleBackground({super.key});
 
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: CustomPaint(
+        painter: StaticDoodlePainter(),
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+}
 
 
 
@@ -120,26 +134,59 @@ class FoodStallDetailsContent extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 🏷️ TITLE + RATING
-                  Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        vendor.name,
-                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                      // 🏷️ NAME + OPEN/CLOSED
+                      Row(
+                        children: [
+                          Text(
+                            vendor.name,
+                            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: vendor.isOpen ? Colors.green : Colors.red,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              vendor.isOpen ? "OPEN" : "CLOSED",
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          "⭐ ${vendor.rating}",
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      )
+
+                      const SizedBox(height: 8),
+
+                      // ❤️ ⭐ 📍 ROW
+                      Row(
+                        children: [
+                          // ❤️ Likes
+                          const Icon(Icons.favorite, color: Colors.red, size: 18),
+                          const SizedBox(width: 4),
+                          Text("${vendor.likesPercent}%"),
+
+                          const SizedBox(width: 16),
+
+                          // ⭐ Rating
+                          const Icon(Icons.star, color: Colors.amber, size: 18),
+                          const SizedBox(width: 4),
+                          Text(vendor.rating.toString()),
+
+                          const SizedBox(width: 16),
+
+                          // 📍 Location
+                          const Icon(Icons.location_on, size: 18),
+                          const SizedBox(width: 4),
+                          Text(vendor.locationName),
+                        ],
+                      ),
                     ],
                   ),
+
 
                   const SizedBox(height: 20),
 
@@ -150,6 +197,56 @@ class FoodStallDetailsContent extends StatelessWidget {
                       height: 260,
                       width: double.infinity,
                       fit: BoxFit.cover,
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+                  // 🔥 POPULAR DISHES
+                  const Text(
+                    "🔥 Popular Dishes",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+
+                  Container(
+                    height: 2,
+                    width: 120,
+                    margin: const EdgeInsets.only(top: 4, bottom: 16),
+                    color: Colors.amber,
+                  ),
+
+                  SizedBox(
+                    height: 180,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: vendor.menu.take(5).map((item) {
+                        return Container(
+                          width: 220,
+                          margin: const EdgeInsets.only(right: 16),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(18),
+                            color: Colors.black.withOpacity(0.08),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.name,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              const Spacer(),
+                              Text(
+                                "₹${item.price}",
+                                style: const TextStyle(
+                                  color: Color(0xFFFFB300),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
 
@@ -170,9 +267,18 @@ class FoodStallDetailsContent extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   // 🍔 FOOD ITEMS FROM FIRESTORE
-                  ...vendor.menu.map((item) {
-                    return _foodItem(context, item.name, item.price);
-                  }).toList(),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.6, // ✅ 60% WIDTH
+                      child: Column(
+                        children: vendor.menu.map((item) {
+                          return _foodItem(context, item);
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+
 
                   const SizedBox(height: 40),
                 ],
@@ -185,10 +291,12 @@ class FoodStallDetailsContent extends StatelessWidget {
   }
 
   // ✅ FIXED: context passed + price is int
-  Widget _foodItem(BuildContext context, String name, int price) {
+  Widget _foodItem(BuildContext context, MenuItem item) {
+    final qty = CartService.getQty(item);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16), // slightly smaller height
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         color: Colors.black.withOpacity(0.05),
@@ -198,25 +306,50 @@ class FoodStallDetailsContent extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name, style: const TextStyle(fontSize: 16)),
+              Text(item.name, style: const TextStyle(fontSize: 16)),
               const SizedBox(height: 4),
-              Text("₹$price", style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text("₹${item.price}", style: const TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
+
           const Spacer(),
-          ElevatedButton(
-            onPressed: () {
-              // TODO: CartService.addItem(name, price);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("$name added to cart")),
-              );
-            },
-            child: const Text("ADD"),
-          )
+
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (qty > 0)
+                IconButton(
+                  icon: const Icon(Icons.remove, color: Color(0xFFFFB300)),
+                  onPressed: () {
+                    CartService.remove(item);
+                    (context as Element).markNeedsBuild(); // 🔥 forces rebuild
+                  },
+                ),
+
+              if (qty > 0)
+                Text(
+                  qty.toString(),
+                  style: const TextStyle(
+                    color: Color(0xFFFFB300),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+              IconButton(
+                icon: const Icon(Icons.add, color: Color(0xFFFFB300)),
+                onPressed: () {
+                  CartService.add(item);
+                  (context as Element).markNeedsBuild(); // 🔥 forces rebuild
+                },
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
+
 }
 
 class AnimatedMeshBackground extends StatefulWidget {
@@ -225,103 +358,87 @@ class AnimatedMeshBackground extends StatefulWidget {
   @override
   State<AnimatedMeshBackground> createState() => _AnimatedMeshBackgroundState();
 }
-class DoodleOverlay extends StatelessWidget {
-  DoodleOverlay({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return IgnorePointer(
-      child: CustomPaint(
-        painter: _DoodlePainter(isDark: isDark),
-        child: const SizedBox.expand(),
-      ),
-    );
-  }
-}
-
-class _DoodlePainter extends CustomPainter {
-  final bool isDark;
-  final Random r = Random(65); // fixed seed = no movement
-
-  _DoodlePainter({required this.isDark});
+class StaticDoodlePainter extends CustomPainter {
+  final Random r = Random(12345); // fixed seed = SAME PATTERN ALWAYS
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = (isDark ? Colors.white : Colors.black).withOpacity(0.07)
+      ..color = Colors.black.withOpacity(0.035) // VERY subtle
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2   // 👈 THICKER
+      ..strokeWidth = 1.0
       ..strokeCap = StrokeCap.round;
 
-    for (int i = 0; i < 45; i++) {
-      final x = r.nextDouble() * size.width;
-      final y = r.nextDouble() * size.height;
-      final s = r.nextDouble() * 0.03+0.01;
+    const double spacing = 38; // 👈 VERY CLOSE like WhatsApp
 
-      switch (r.nextInt(6)) {
-        case 0:
-        // bowl
-          canvas.drawArc(
-            Rect.fromCenter(center: Offset(x, y), width: s, height: s),
-            0,
-            pi,
-            false,
-            paint,
-          );
-          break;
+    for (double x = 0; x < size.width; x += spacing) {
+      for (double y = 0; y < size.height; y += spacing) {
+        final dx = x + r.nextDouble() * 6;
+        final dy = y + r.nextDouble() * 6;
+        final s = 8 + r.nextDouble() * 6; // 👈 VERY SMALL
 
-        case 1:
-        // flame
-          final path = Path()
-            ..moveTo(x, y)
-            ..quadraticBezierTo(x + s * 0.3, y - s, x, y - s * 1.2)
-            ..quadraticBezierTo(x - s * 0.3, y - s, x, y);
-          canvas.drawPath(path, paint);
-          break;
+        switch (r.nextInt(6)) {
+          case 0: // bowl
+            canvas.drawArc(
+              Rect.fromCenter(center: Offset(dx, dy), width: s, height: s),
+              0,
+              pi,
+              false,
+              paint,
+            );
+            break;
 
-        case 2:
-        // spoon
-          canvas.drawCircle(Offset(x, y), s * 0.18, paint);
-          canvas.drawLine(
-            Offset(x, y + s * 0.18),
-            Offset(x, y + s),
-            paint,
-          );
-          break;
+          case 1: // flame
+            final path = Path()
+              ..moveTo(dx, dy)
+              ..quadraticBezierTo(dx + s * 0.3, dy - s, dx, dy - s * 1.1)
+              ..quadraticBezierTo(dx - s * 0.3, dy - s, dx, dy);
+            canvas.drawPath(path, paint);
+            break;
 
-        case 3:
-        // pan
-          canvas.drawCircle(Offset(x, y), s * 0.32, paint);
-          canvas.drawLine(
-            Offset(x + s * 0.32, y),
-            Offset(x + s * 0.8, y),
-            paint,
-          );
-          break;
+          case 2: // spoon
+            canvas.drawCircle(Offset(dx, dy), s * 0.25, paint);
+            canvas.drawLine(
+              Offset(dx, dy + s * 0.25),
+              Offset(dx, dy + s),
+              paint,
+            );
+            break;
 
-        case 4:
-        // star
-          canvas.drawLine(Offset(x - s, y), Offset(x + s, y), paint);
-          canvas.drawLine(Offset(x, y - s), Offset(x, y + s), paint);
-          break;
+          case 3: // pan
+            canvas.drawCircle(Offset(dx, dy), s * 0.35, paint);
+            canvas.drawLine(
+              Offset(dx + s * 0.35, dy),
+              Offset(dx + s, dy),
+              paint,
+            );
+            break;
 
-        case 5:
-        // squiggle
-          final path = Path()
-            ..moveTo(x - s, y)
-            ..quadraticBezierTo(x, y - s, x + s, y)
-            ..quadraticBezierTo(x + s * 1.5, y + s, x + s * 2, y);
-          canvas.drawPath(path, paint);
-          break;
+          case 4: // star
+            canvas.drawLine(Offset(dx - s * 0.6, dy), Offset(dx + s * 0.6, dy), paint);
+            canvas.drawLine(Offset(dx, dy - s * 0.6), Offset(dx, dy + s * 0.6), paint);
+            break;
+
+          case 5: // squiggle
+            final path = Path()
+              ..moveTo(dx - s * 0.6, dy)
+              ..quadraticBezierTo(dx, dy - s * 0.6, dx + s * 0.6, dy)
+              ..quadraticBezierTo(dx + s, dy + s * 0.4, dx + s * 1.2, dy);
+            canvas.drawPath(path, paint);
+            break;
+        }
       }
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false; // 🔥 NEVER REPAINT
 }
+
+
+
 
 
 
@@ -1220,14 +1337,14 @@ class _StallsPageContentState extends State<StallsPageContent> {
             userPosition!.latitude,
             userPosition!.longitude,
             a.lat,
-            a.lon,
+            a.lng,
           );
 
           final db = distanceInKm(
             userPosition!.latitude,
             userPosition!.longitude,
             b.lat,
-            b.lon,
+            b.lng,
           );
 
           return da.compareTo(db);
@@ -1251,7 +1368,7 @@ class _StallsPageContentState extends State<StallsPageContent> {
                 userPosition!.latitude,
                 userPosition!.longitude,
                 vendor.lat,
-                vendor.lon,
+                vendor.lng,
               );
 
               return _StallCard(
@@ -1404,6 +1521,17 @@ class VendorCard extends StatelessWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  Position? userPosition;
+  @override
+  void initState() {
+    super.initState();
+    _loadLocation();
+  }
+
+  Future<void> _loadLocation() async {
+    final pos = await LocationService.getCurrentLocation();
+    setState(() => userPosition = pos);
+  }
   int streatoPoints = 0;
   int selectedPage = 0;
   Vendor? selectedVendor;
@@ -1450,7 +1578,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
     print("AI FILTER = $aiFilter");
 
-    final food = aiFilter["food"]?.toString().toLowerCase().trim();
+    String? food = aiFilter["food"]?.toString().toLowerCase();
+
+    if (food != null) {
+      food = food
+          .replaceAll("under", "")
+          .replaceAll("below", "")
+          .replaceAll("rs", "")
+          .replaceAll("₹", "")
+          .trim();
+    }
+
     if (food == null || food.isEmpty) {
       setState(() {
         searchResults = [];
@@ -1464,6 +1602,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       return; // ⛔ STOP SEARCH COMPLETELY
     }
+
 
 
     final maxPrice = aiFilter["max_price"] == null
@@ -1486,25 +1625,35 @@ class _HomeScreenState extends State<HomeScreen> {
       bool foundValidItem = false;
 
       for (final item in v.menu) {
+        print("CHECKING ITEM: ${item.name} PRICE: ${item.price}");
+        print("FOOD QUERY: $food  MAX PRICE: $maxPrice");
+
         final itemName = item.name.toLowerCase().trim();
 
-        // 1️⃣ FOOD MUST MATCH
-        if (!itemName.contains(food)) {
-          continue;
+        // 🔹 FOOD MATCH (SMART)
+        if (food != null && food.isNotEmpty) {
+          if (!itemName.contains(food)) {
+            continue; // not matching this food
+          }
         }
 
-        // 2️⃣ PRICE MUST MATCH
-        if (maxPrice != null && item.price > maxPrice) {
-          continue;
+        // 🔹 PRICE MATCH
+        if (maxPrice != null) {
+          if (item.price > maxPrice) {
+            continue; // too expensive
+          }
         }
 
-        // ✅ Valid item found
+        // ✅ MATCH FOUND
         foundValidItem = true;
         break;
       }
 
       return foundValidItem;
     }).toList();
+
+
+
 
 
 
@@ -1583,16 +1732,30 @@ class _HomeScreenState extends State<HomeScreen> {
         return Scaffold(
           body: Stack(
             children: [
-              // 🌋 BACKGROUND
-              const AnimatedMeshBackground(),
-              DoodleOverlay(),
+              Builder(
+                builder: (context) {
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
+
+                  if (isDark) {
+                    // 🌙 KEEP YOUR OLD ANIMATED BLOBS
+                    return const AnimatedMeshBackground();
+                  } else {
+                    // ☀️ LIGHT MODE → DOODLES
+                    return Container(color: Colors.white);
+                  }
+                },
+              ),
+
 
               // 🧱 FOREGROUND UI
               SafeArea(
                 child: Container(
-                  color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.18),
-                  child: Row(
+                  color: Colors.transparent,
+                  child: userPosition == null
+                      ? const Center(child: CircularProgressIndicator())
+                      : Row(
                     children: [
+                  // your UI
                       // LEFT NAV BAR
                       Container(
                         width: 100, // 👈 reduced ~20%
@@ -1657,7 +1820,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                     const SizedBox(height: 20),
                                     _NavIcon(icon: Icons.star),
                                     const SizedBox(height: 20),
-                                    _NavIcon(icon: Icons.map),
+                                    _NavIcon(
+                                      icon: Icons.map,
+                                      isActive: selectedPage == 5,
+                                      onTap: () => setState(() => selectedPage = 5),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -1731,23 +1898,47 @@ class _HomeScreenState extends State<HomeScreen> {
                                           // 🛒 CART
                                           Stack(
                                             children: [
-                                              const Icon(Icons.shopping_cart_outlined, size: 26),
+                                              GestureDetector(
+                                                onTap: () {
+                                                  setState(() {
+                                                    selectedPage = 6;
+                                                  });
+                                                },
+                                                child: Stack(
+                                                  children: [
+                                                    const Icon(Icons.shopping_cart_outlined, size: 26),
+
+                                                    if (CartService.totalItems > 0)
+                                                      Positioned(
+                                                        right: 0,
+                                                        top: 0,
+                                                        child: Container(
+                                                          width: 10,
+                                                          height: 10,
+                                                          decoration: const BoxDecoration(
+                                                            color: Color(0xFFFFB300),
+                                                            shape: BoxShape.circle,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                              ),
+
                                               if (CartService.totalItems > 0)
                                                 Positioned(
                                                   right: 0,
                                                   top: 0,
                                                   child: Container(
-                                                    padding: const EdgeInsets.all(4),
+                                                    width: 10,
+                                                    height: 10,
                                                     decoration: const BoxDecoration(
-                                                      color: Colors.red,
+                                                      color: Color(0xFFFFB300),
                                                       shape: BoxShape.circle,
-                                                    ),
-                                                    child: Text(
-                                                      CartService.totalItems.toString(),
-                                                      style: const TextStyle(color: Colors.white, fontSize: 10),
                                                     ),
                                                   ),
                                                 ),
+
                                             ],
                                           ),
 
@@ -1803,6 +1994,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                         },
                                       );
                                     }
+                                    if (selectedPage == 5) {
+                                      return ClipRRect(
+                                        borderRadius: BorderRadius.circular(20),
+                                        child: StreatoMapPage(
+                                          userLat: userPosition!.latitude,
+                                          userLon: userPosition!.longitude,
+                                          onOpenStall: (vendor) {
+                                            setState(() {
+                                              selectedVendor = vendor;
+                                              selectedPage = 3; // open stall details page
+                                            });
+                                          },
+                                        ),
+                                      );
+                                    }
+                                    if (selectedPage == 6) {
+                                      return const CartPage();
+                                    }
+
+
 
 
                                     return const HomePageContent(); // fallback safety
@@ -1816,8 +2027,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ],
-                  ),
+
                 ),
+              ),
               ),
             ],
           ),
@@ -1989,6 +2201,7 @@ class _BiteClipper extends CustomClipper<Path> {
   @override
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
+
 
 
 
