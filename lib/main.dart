@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:streato_app/pages/cart_page.dart';
 import 'package:streato_app/pages/map_page.dart';
+import 'package:streato_app/pages/vendor_stories_page.dart';
+import 'package:streato_app/widgets/story_video_card.dart';
 import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_gate.dart';
@@ -19,6 +21,132 @@ import 'services/gemini_service.dart';
 import '../widgets/hero_video.dart';
 import 'dart:ui';
 import 'pages/map_page.dart';
+import '../services/streato_points_service.dart';
+
+
+
+
+
+class _RealSearchBar extends StatefulWidget {
+  final TextEditingController controller;
+  final Function(String) onSearch;
+
+  const _RealSearchBar({
+    required this.controller,
+    required this.onSearch,
+  });
+
+  @override
+  State<_RealSearchBar> createState() => _RealSearchBarState();
+}
+
+class _RealSearchBarState extends State<_RealSearchBar> {
+  bool isFocused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      padding: const EdgeInsets.all(2.5),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFFFB300), // amber
+            Color(0xFFFF8F00), // deep amber
+          ],
+        ),
+        boxShadow: isFocused
+            ? [
+          BoxShadow(
+            color: const Color(0xFFFFB300).withOpacity(0.6),
+            blurRadius: 25,
+            spreadRadius: 2,
+          )
+        ]
+            : [],
+      ),
+      child: Container(
+        height: 46,
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(28),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.search),
+            const SizedBox(width: 10),
+
+            Expanded(
+              child: Focus(
+                onFocusChange: (f) {
+                  setState(() => isFocused = f);
+                },
+                child: TextField(
+                  controller: widget.controller,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (value) {
+                    widget.onSearch(value);
+                  },
+                  decoration: const InputDecoration(
+                    hintText: "Search street food, stalls...",
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/*class FilteredStallsPage extends StatelessWidget {
+  final List<Vendor> vendors;
+  final Function(Vendor) onOpenStall;
+
+  const FilteredStallsPage({
+    super.key,
+    required this.vendors,
+    required this.onOpenStall,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (vendors.isEmpty) {
+      return const Center(child: Text("No stalls found"));
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: GridView.builder(
+        itemCount: filteredVendors.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          crossAxisSpacing: 20,
+          mainAxisSpacing: 20,
+          childAspectRatio: 1.05,
+        ),
+        itemBuilder: (context, index) {
+          final vendor = filteredVendors[index];
+
+          return _StallCard(
+            name: vendor.name,
+            image: vendor.image,
+            rating: vendor.rating,
+            distance: 0, // optional
+            onTap: () {
+              onOpenStall(vendor);
+            },
+          );
+        },
+      ),
+    );
+  }
+}*/
+
 
 class StaticDoodleBackground extends StatelessWidget {
   const StaticDoodleBackground({super.key});
@@ -627,6 +755,9 @@ class StreatoApp extends StatelessWidget {
 
           themeMode: controller.isDark ? ThemeMode.dark : ThemeMode.light,
 
+          themeAnimationDuration: const Duration(milliseconds: 400), // ✅ THIS
+          themeAnimationCurve: Curves.easeInOutCubic,                 // ✅ THIS
+
           theme: ThemeData(
             brightness: Brightness.light,
             scaffoldBackgroundColor: const Color(0xFFF7F7F7),
@@ -639,7 +770,7 @@ class StreatoApp extends StatelessWidget {
 
           darkTheme: ThemeData(
             brightness: Brightness.dark,
-            scaffoldBackgroundColor: const Color(0xFF1C1C1C), // 👈 YOUR REQUIRED COLOR
+            scaffoldBackgroundColor: const Color(0xFF1C1C1C),
             cardColor: const Color(0xFF252525),
             colorScheme: ColorScheme.fromSeed(
               seedColor: const Color(0xFFFFBF00),
@@ -647,8 +778,9 @@ class StreatoApp extends StatelessWidget {
             ),
           ),
 
-            home: const AuthGate(),
+          home: const AuthGate(),
         );
+
 
 
       },
@@ -734,8 +866,9 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-
+  bool isLogin = true;
   bool loading = false;
+
   Future<void> login() async {
     try {
       setState(() => loading = true);
@@ -755,6 +888,24 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => loading = false);
     }
   }
+  Future<void> signup() async {
+    try {
+      setState(() => loading = true);
+
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Signup failed: $e")),
+      );
+    } finally {
+      setState(() => loading = false);
+    }
+  }
+
 
 
   @override
@@ -815,9 +966,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       const Icon(Icons.fastfood, size: 48, color: Colors.white),
                       const SizedBox(height: 12),
 
-                      const Text(
-                        "Sign in with email",
-                        style: TextStyle(
+                      Text(isLogin ? "Sign in with email" : "Create account",
+                        style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -863,27 +1013,40 @@ class _LoginScreenState extends State<LoginScreen> {
                               borderRadius: BorderRadius.circular(14),
                             ),
                           ),
-                          onPressed: loading ? null : () => login(), // ✅ THIS IS THE FIX
+                          onPressed: loading
+                              ? null
+                              : () {
+                            if (isLogin) {
+                              login();
+                            } else {
+                              signup();
+                            }
+                          },
                           child: loading
                               ? const CircularProgressIndicator(color: Colors.white)
-                              : const Text("Get Started"),
+                              : Text(isLogin ? "Login" : "Sign Up"),
                         ),
                       ),
 
+                      const SizedBox(height: 16),
+
+                      // 🔁 🔥 ADD THIS EXACT BLOCK
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            isLogin = !isLogin;
+                          });
+                        },
+                        child: Text(
+                          isLogin
+                              ? "Don't have an account? Create one"
+                              : "Already have an account? Login",
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
 
                       const SizedBox(height: 16),
 
-                      // 🔹 SOCIAL ICONS
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.g_mobiledata, color: Colors.white, size: 34),
-                          SizedBox(width: 12),
-                          Icon(Icons.facebook, color: Colors.white),
-                          SizedBox(width: 12),
-                          Icon(Icons.apple, color: Colors.white),
-                        ],
-                      ),
                     ],
                   ),
                 ),
@@ -919,52 +1082,115 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+class PremiumSearchBar extends StatefulWidget {
+  final Function(String) onSearch;
 
-
-class HoverSearchBar extends StatefulWidget {
-  const HoverSearchBar({super.key});
-
+  const PremiumSearchBar({super.key, required this.onSearch});
 
   @override
-  State<HoverSearchBar> createState() => _HoverSearchBarState();
-
+  State<PremiumSearchBar> createState() => _PremiumSearchBarState();
 }
 
-class _HoverSearchBarState extends State<HoverSearchBar> {
-  bool isHovered = false;
+class _PremiumSearchBarState extends State<PremiumSearchBar> {
+  final controller = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => isHovered = true),
-      onExit: (_) => setState(() => isHovered = false),
-      child: AnimatedScale(
-        scale: isHovered ? 1.03 : 1.0,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-        child: Container(
-          height: 50,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.amber.withOpacity(0.5),
-              width: 1,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return SizedBox(
+      height: 60,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 🌑 OUTER PILL (always dark glass)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.12),
+                  ),
+                ),
+              ),
             ),
           ),
-          child: const Row(
-            children: [
-              Icon(Icons.search),
-              SizedBox(width: 10),
-              Text("Search street food, stalls.."),
-            ],
+
+          // 🔍 SEARCH ICON (sits in outer area)
+          Positioned(
+            left: 22,
+            child: Icon(
+              Icons.search,
+              size: 22,
+              color: isDark ? const Color(0xFFFFB300) : Colors.black,
+            ),
           ),
-        ),
+
+          // ☁️ INNER PILL
+          Positioned(
+            left: 58, // 👈 pushes inner pill right (so icon stays outside)
+            right: 8,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                child: Container(
+                  height: 44,
+                  alignment: Alignment.center, // ✅ vertical centering
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.06)
+                        : Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.2)
+                          : Colors.black.withOpacity(0.5),
+                    ),
+                  ),
+                  child: TextField(
+                    controller: controller,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black,
+                      fontSize: 16,
+                      height: 1.0, // ✅ perfect vertical centering
+                    ),
+                    decoration: InputDecoration(
+                      hintText: "Search Streat Food, Stalls..",
+                      hintStyle: TextStyle(
+                        color: isDark
+                            ? Colors.white70
+                            : Colors.black.withOpacity(0.6),
+                      ),
+                      border: InputBorder.none,
+                      isCollapsed: true, // ✅ fixes vertical misalignment
+                    ),
+                    onSubmitted: (value) {
+                      if (value.trim().isNotEmpty) {
+                        widget.onSearch(value.trim());
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
+
+
+
+
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -973,7 +1199,20 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 class HomePageContent extends StatelessWidget {
-  const HomePageContent({super.key});
+  final VoidCallback onTrending;
+  final VoidCallback onHighlyRated;
+  final VoidCallback onMostLoved;
+  final VoidCallback onNearby;
+
+  const HomePageContent({
+    super.key,
+    required this.onTrending,
+    required this.onHighlyRated,
+    required this.onMostLoved,
+    required this.onNearby,
+  });
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -1046,10 +1285,22 @@ class HomePageContent extends StatelessWidget {
                     title: item["title"]!,
                     image: item["image"]!,
                     onTap: () {
-                      // TODO: open filtered stalls page later
-                      debugPrint("Clicked: ${item["title"]}");
+                      if (item["title"] == "TRENDING 🔥") {
+                        onTrending();
+                      }
+                      else if (item["title"] == "HIGHLY RATED ⭐") {
+                        onHighlyRated();
+                      }
+                      else if (item["title"] == "MOST LOVED 💛") {
+                        onMostLoved();
+                      }
+                      else if (item["title"] == "NEARBY 📍") {
+                        onNearby();
+                      }
                     },
+
                   );
+
                 },
               ),
             ),
@@ -1066,61 +1317,58 @@ class VendorStoriesPageContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          const SizedBox(height: 20),
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection("vendor_stories").snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          // MAIN CONTAINER (same width as hero & features)
-          Center(
-            child: FractionallySizedBox(
-              widthFactor: 0.8,
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Vendor Stories",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+        final docs = snapshot.data!.docs;
 
-                    const SizedBox(height: 20),
+        if (docs.isEmpty) {
+          return const Center(child: Text("No stories found"));
+        }
 
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: 3,
-                      gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 20,
-                        mainAxisSpacing: 20,
-                        childAspectRatio: 1.25,
-                      ),
-                      itemBuilder: (context, index) {
-                        return _VendorStoryCard();
-                      },
-                    ),
-                  ],
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+
+              Center(
+                child: FractionallySizedBox(
+                  widthFactor: 0.9,
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final doc = docs[index];
+                      final data = doc.data() as Map<String, dynamic>;
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: StoryVideoCard(
+                          videoUrl: data["videoUrl"],
+                          stallName: data["stallName"],
+                          vendorName: data["vendorName"], storyId: '',
+                        ),
+                      );
+                    },
+                  ),
+
                 ),
               ),
-            ),
-          ),
 
-          const SizedBox(height: 40),
-        ],
-      ),
+              const SizedBox(height: 40),
+            ],
+          ),
+        );
+      },
     );
   }
 }
+
 class _VendorStoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -1282,10 +1530,11 @@ class _FeatureCategoryCardState extends State<FeatureCategoryCard> {
 
 
 class StallsPageContent extends StatefulWidget {
+  final String? filterType;
   final Function(Vendor vendor) onOpenStall;
 
 
-  const StallsPageContent({super.key, required this.onOpenStall});
+  const StallsPageContent({super.key, required this.onOpenStall,this.filterType});
 
   @override
   State<StallsPageContent> createState() => _StallsPageContentState();
@@ -1329,32 +1578,61 @@ class _StallsPageContentState extends State<StallsPageContent> {
           final data = doc.data() as Map<String, dynamic>;
           return Vendor.fromFirestore(doc.id, data);
         }).toList();
+        List<Vendor> filteredVendors = vendors;
+
+// 🔥 APPLY FILTER IF TRENDING
+        if (widget.filterType == "trending") {
+          filteredVendors = vendors.where((v) {
+            return v.rating >= 4.5 && v.likesPercent >= 90;
+          }).toList();
+        }
+
+        if (widget.filterType == "highly") {
+          filteredVendors = vendors.where((v) => v.rating >= 4.5).toList();
+        }
+
+        if (widget.filterType == "loved") {
+          filteredVendors = vendors.where((v) => v.likesPercent >= 90).toList();
+        }
+
+        if (widget.filterType == "nearby") {
+          filteredVendors = vendors.where((v) {
+            final d = distanceInKm(
+              userPosition!.latitude,
+              userPosition!.longitude,
+              v.lat,
+              v.lng,
+            );
+            return d <= 3;
+          }).toList();
+        }
+
+
 
 
         // 🔥 Sort by nearest
-        vendors.sort((a, b) {
+        filteredVendors.sort((a, b) {
           final da = distanceInKm(
             userPosition!.latitude,
             userPosition!.longitude,
             a.lat,
             a.lng,
           );
-
           final db = distanceInKm(
             userPosition!.latitude,
             userPosition!.longitude,
             b.lat,
             b.lng,
           );
-
           return da.compareTo(db);
         });
+
 
 
         return Padding(
           padding: const EdgeInsets.all(16),
           child: GridView.builder(
-            itemCount: vendors.length,
+            itemCount: filteredVendors.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 4,
               crossAxisSpacing: 20,
@@ -1362,7 +1640,7 @@ class _StallsPageContentState extends State<StallsPageContent> {
               childAspectRatio: 1.05,
             ),
             itemBuilder: (context, index) {
-              final vendor = vendors[index];
+              final vendor = filteredVendors[index];
 
               final dist = distanceInKm(
                 userPosition!.latitude,
@@ -1388,7 +1666,7 @@ class _StallsPageContentState extends State<StallsPageContent> {
     );
   }
 }
-class _StallCard extends StatelessWidget {
+class _StallCard extends StatefulWidget {
   final String name;
   final String image;
   final double rating;
@@ -1404,62 +1682,85 @@ class _StallCard extends StatelessWidget {
   });
 
   @override
+  State<_StallCard> createState() => _StallCardState();
+}
+
+class _StallCardState extends State<_StallCard> {
+  bool isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 10,
+    return MouseRegion(
+      onEnter: (_) => setState(() => isHovered = true),
+      onExit: (_) => setState(() => isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          scale: isHovered ? 1.05 : 1.0,   // ✅ ZOOM EFFECT
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                if (isHovered)
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.25),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(20)),
-                child: Image.network(
-                  image,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(20),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(10),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.star, size: 16, color: Colors.amber),
-                      const SizedBox(width: 4),
-                      Text(rating.toStringAsFixed(1)),
-                      const Spacer(),
-                      const Icon(Icons.location_on, size: 16),
-                      const SizedBox(width: 2),
-                      Text("${distance.toStringAsFixed(2)} km"),
-                    ],
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                      child: Image.network(
+                        widget.image,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(widget.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.star, size: 16, color: Colors.amber),
+                            const SizedBox(width: 4),
+                            Text(widget.rating.toStringAsFixed(1)),
+                            const Spacer(),
+                            const Icon(Icons.location_on, size: 16),
+                            const SizedBox(width: 2),
+                            Text("${widget.distance.toStringAsFixed(2)} km"),
+                          ],
+                        )
+                      ],
+                    ),
                   )
                 ],
               ),
-            )
-          ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
+
 
 
 class VendorCard extends StatelessWidget {
@@ -1519,20 +1820,62 @@ class VendorCard extends StatelessWidget {
     );
   }
 }
-
 class _HomeScreenState extends State<HomeScreen> {
+  String? stallFilterType;
+
+  final TextEditingController searchController = TextEditingController();
+  List<Vendor> filteredVendors = [];
   Position? userPosition;
+  Future<void> openHighlyRated() async {
+    print("Highly rated clicked");
+
+    setState(() {
+      stallFilterType = "highly"; // or "loved", "nearby", "trending"
+      selectedPage = 1; // 👈 ALWAYS go to stalls page
+    });
+
+  }
+
+  Future<void> openMostLoved() async {
+    print("most loved clicked");
+
+    setState(() {
+      stallFilterType = "loved"; // or "loved", "nearby", "trending"
+      selectedPage = 1; // 👈 ALWAYS go to stalls page
+    });
+
+  }
+
+  Future<void> openNearby() async {
+    print("nearby clicked");
+
+    setState(() {
+      stallFilterType = "nearby"; // or "loved", "nearby", "trending"
+      selectedPage = 1; // 👈 ALWAYS go to stalls page
+    });
+
+  }
+  Future<void> openTrending() async {
+    print("trending clicked");
+
+    setState(() {
+      selectedPage = 1;
+      stallFilterType="trending";
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _loadLocation();
   }
 
+
   Future<void> _loadLocation() async {
     final pos = await LocationService.getCurrentLocation();
     setState(() => userPosition = pos);
   }
-  int streatoPoints = 0;
+
   int selectedPage = 0;
   Vendor? selectedVendor;
   List<Vendor> searchResults = [];
@@ -1677,43 +2020,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
 
-  void showSearchDialog(BuildContext context) {
-    final controller = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: const Text("AI Search"),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: "e.g. pani puri under 20 rs",
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final text = controller.text.trim();
-                Navigator.pop(context);
-
-                if (text.isNotEmpty) {
-                  onSearch(text); // 🔥 YOUR GEMINI FUNCTION
-                }
-              },
-              child: const Text("Search"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
 
 
 
@@ -1851,14 +2157,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                         children: [
                                           // 🔍 SEARCH BAR
                                           SizedBox(
-                                            width: 420, // half width as you wanted
-                                            child: GestureDetector(
-                                              onTap: () {
-                                                showSearchDialog(context);
+                                            width: 420,
+                                            child: PremiumSearchBar(
+                                              onSearch: (text) {
+                                                onSearch(text); // YOUR EXISTING SEARCH FUNCTION
                                               },
-                                              child: const HoverSearchBar(),
                                             ),
                                           ),
+
+
+
 
                                           const Spacer(),
 
@@ -1888,7 +2196,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                               children: [
                                                 const Icon(Icons.local_fire_department, color: Colors.orange),
                                                 const SizedBox(width: 6),
-                                                Text(streatoPoints.toString()),
+                                                FutureBuilder<int>(
+                                                  future: StreatoPointsService.getPoints(),
+                                                  builder: (context, snapshot) {
+                                                    if (!snapshot.hasData) {
+                                                      return const Text("0");
+                                                    }
+                                                    return Text(
+                                                      snapshot.data.toString(),
+                                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                                    );
+                                                  },
+                                                ),
                                               ],
                                             ),
                                           ),
@@ -1900,10 +2219,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                             children: [
                                               GestureDetector(
                                                 onTap: () {
-                                                  setState(() {
-                                                    selectedPage = 6;
-                                                  });
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(builder: (_) => const CartPage()),
+                                                  );
                                                 },
+
                                                 child: Stack(
                                                   children: [
                                                     const Icon(Icons.shopping_cart_outlined, size: 26),
@@ -1960,11 +2281,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Expanded(
                                   child: () {
                                     if (selectedPage == 0) {
-                                      return const HomePageContent();
+                                      return HomePageContent(
+                                        onTrending: openTrending,
+                                        onHighlyRated: openHighlyRated,
+                                        onMostLoved: openMostLoved,
+                                        onNearby: openNearby,
+                                      );
+
                                     }
 
                                     if (selectedPage == 1) {
                                       return StallsPageContent(
+                                        filterType: stallFilterType,
                                         onOpenStall: (vendor) {
                                           setState(() {
                                             selectedVendor = vendor;
@@ -1972,11 +2300,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                           });
                                         },
                                       );
-
                                     }
 
+
+
                                     if (selectedPage == 2) {
-                                      return const VendorStoriesPageContent(); // ✅ VENDOR STORIES
+                                      return const VendorStoriesPage(); // ✅ VENDOR STORIES
                                     }
 
                                     if (selectedPage == 3) {
@@ -2009,14 +2338,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                       );
                                     }
-                                    if (selectedPage == 6) {
-                                      return const CartPage();
-                                    }
-
-
-
-
-                                    return const HomePageContent(); // fallback safety
+                                    return HomePageContent(onTrending: () {  },onHighlyRated: () {  }, onMostLoved: () {  }, onNearby: () {  },); // fallback safety
                                   }(),
                                 ),
 
