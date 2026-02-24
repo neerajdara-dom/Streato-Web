@@ -8,6 +8,7 @@ import 'package:streato_app/widgets/story_video_card.dart';
 import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_gate.dart';
+import 'pages/leaderboard_page.dart';
 import 'signup_screen.dart';
 import '../services/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -2124,7 +2125,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                       onTap: () => setState(() => selectedPage = 2),
                                     ),
                                     const SizedBox(height: 20),
-                                    _NavIcon(icon: Icons.star),
+                                    _NavIcon(
+                                      icon: Icons.star,
+                                      isActive: selectedPage == 6,   // leaderboard page index
+                                      onTap: () => setState(() => selectedPage = 6),
+                                    ),
                                     const SizedBox(height: 20),
                                     _NavIcon(
                                       icon: Icons.map,
@@ -2337,6 +2342,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                           },
                                         ),
                                       );
+                                    }
+                                    if(selectedPage==6){
+                                      return const LeaderboardPage();
                                     }
                                     return HomePageContent(onTrending: () {  },onHighlyRated: () {  }, onMostLoved: () {  }, onNearby: () {  },); // fallback safety
                                   }(),
