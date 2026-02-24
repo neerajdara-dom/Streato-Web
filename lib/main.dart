@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:streato_app/pages/cart_page.dart';
 import 'package:streato_app/pages/map_page.dart';
 import 'package:streato_app/pages/vendor_stories_page.dart';
+import 'package:streato_app/widgets/chronicles_bar.dart';
 import 'package:streato_app/widgets/story_video_card.dart';
 import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -893,15 +894,23 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       setState(() => loading = true);
 
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
+      await FirebaseFirestore.instance
+          .collection("users")
+          .doc(cred.user!.uid)
+          .set({
+        "name": emailController.text.split("@")[0], // temp name
+        "streatoPoints": 0,
+        "photoUrl": "",
+      });
+
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Signup failed: $e")),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Signup failed: $e")));
     } finally {
       setState(() => loading = false);
     }
@@ -1231,6 +1240,92 @@ class HomePageContent extends StatelessWidget {
             ),
           ),
 
+
+          const SizedBox(height: 20),
+          /// ================= CHRONICLES =================
+          const SizedBox(height: 18),
+
+          Center(
+            child: FractionallySizedBox(
+              widthFactor: 0.8,   // 🔥 SAME AS HERO & DISCOVER
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  /// 🔥 CENTERED HEADING (LIKE DISCOVER)
+                  const Center(
+                    child: Text(
+                      "Chronicles",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  /// 🔥 STORIES ROW (LEFT ALIGNED WITH HERO)
+                  SizedBox(
+                    height: 95,
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection("chronicles")
+                          .orderBy("createdAt", descending: true)
+                          .limit(7)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const SizedBox();
+                        }
+
+                        final docs = snapshot.data!.docs;
+
+                        return ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: docs.length,
+                          itemBuilder: (context, index) {
+                            final data = docs[index].data() as Map<String, dynamic>;
+
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 14),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: const BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Color(0xFFFFB300),
+                                          Color(0xFFFF8F00),
+                                        ],
+                                      ),
+                                    ),
+                                    child: CircleAvatar(
+                                      radius: 32,
+                                      backgroundImage: NetworkImage(
+                                        data["userPhoto"] ?? "",
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    data["userName"] ?? "User",
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
 
           const SizedBox(height: 20),
           Padding(
