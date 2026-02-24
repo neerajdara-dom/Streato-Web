@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:streato_app/pages/ai_assistant_page.dart';
 import 'package:streato_app/pages/cart_page.dart';
 import 'package:streato_app/pages/map_page.dart';
 import 'package:streato_app/pages/social_feed_page.dart';
@@ -1385,7 +1387,7 @@ class HomePageContent extends StatelessWidget {
                     },
                     {
                       "title": "FOR YOU",
-                      "image": "assets/images/sky.png",
+                      "image": "assets/images/foryou.jpg",
                       "type": "all",
                       //"image": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800"
                     },
@@ -1672,6 +1674,7 @@ class _StallsPageContentState extends State<StallsPageContent> {
   bool showFilters = false;
   String selectedCategory = "All";
   String selectedMood="all";
+  bool showMap = false;
 
   @override
   void initState() {
@@ -1796,6 +1799,8 @@ class _StallsPageContentState extends State<StallsPageContent> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
               child: Row(
                 children: [
+
+                  /// FILTER BUTTON
                   GestureDetector(
                     onTap: () {
                       setState(() {
@@ -1805,21 +1810,55 @@ class _StallsPageContentState extends State<StallsPageContent> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: Colors.grey.shade400),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                              Colors.black.withOpacity(0.08),
-                              blurRadius:10,
-                          )
-                        ]
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: Colors.grey.shade400),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                            )
+                          ]
                       ),
                       child: Row(
                         children: const [
                           Icon(Icons.tune, size: 18),
                           SizedBox(width: 6),
                           Text("Filters"),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  /// 🔥 MAP TOGGLE BUTTON
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        showMap = !showMap;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: Colors.grey.shade400),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                            )
+                          ]
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.map,
+                            size: 18,
+                            color: showMap ? Colors.black : null,
+                          ),
+                          const SizedBox(width: 6),
+                          const Text("Map Toggle"),
                         ],
                       ),
                     ),
@@ -1846,7 +1885,18 @@ class _StallsPageContentState extends State<StallsPageContent> {
 
             /// ================= STALL GRID =================
             Expanded(
-              child: Padding(
+              child: showMap
+                  ? ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: StreatoMapPage(
+                  userLat: userPosition!.latitude,
+                  userLon: userPosition!.longitude,
+                  onOpenStall: (vendor) {
+                    widget.onOpenStall(vendor);
+                  },
+                ),
+              )
+                  : Padding(
                 padding: const EdgeInsets.all(16),
                 child: GridView.builder(
                   itemCount: filteredVendors.length,
@@ -2365,33 +2415,33 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Column(
                                   children: [
                                     _NavIcon(
-                                      icon: Icons.home,
+                                      icon: LucideIcons.home,
                                       isActive: selectedPage == 0,
                                       onTap: () => setState(() => selectedPage = 0),
                                     ),
                                     const SizedBox(height: 20),
                                     _NavIcon(
-                                      icon: Icons.storefront,
+                                      icon: LucideIcons.croissant,
                                       isActive: selectedPage == 1,
                                       onTap: () => setState(() => selectedPage = 1),
                                     ),
                                     const SizedBox(height: 20),
                                     _NavIcon(
-                                      icon: Icons.explore,
+                                      icon: LucideIcons.messageSquare,
                                       isActive: selectedPage == 2,
                                       onTap: () => setState(() => selectedPage = 2),
                                     ),
                                     const SizedBox(height: 20),
                                     _NavIcon(
-                                      icon: Icons.star,
+                                      icon: LucideIcons.trophy,
                                       isActive: selectedPage == 6,   // leaderboard page index
                                       onTap: () => setState(() => selectedPage = 6),
                                     ),
                                     const SizedBox(height: 20),
                                     _NavIcon(
-                                      icon: Icons.map,
-                                      isActive: selectedPage == 5,
-                                      onTap: ()=> setState(()=> selectedPage=5),
+                                      icon: LucideIcons.donut,
+                                      isActive: selectedPage == 7,
+                                      onTap: ()=>setState(()=>selectedPage=7),
                                     ),
                                   ],
                                 ),
@@ -2604,6 +2654,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     if(selectedPage==6){
                                       return const LeaderboardPage();
                                     }
+                                    if(selectedPage==7){
+                                      return const StreatoAIAssistantPage();
+                                    }
                                     return HomePageContent(
                                       onTrending: () {  },onHighlyRated: () {  }, onMostLoved: () {  }, onNearby: () {  },onMoodSelected: openMood,); // fallback safety
                                   }(),
@@ -2738,9 +2791,15 @@ class _NavIconState extends State<_NavIcon> {
 
                 Icon(
                   widget.icon,
-                  size: 24,
+                  size: 26,
                   color: iconColor,
-                ),
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 4,
+                    )
+                  ],
+                )
               ],
             ),
           ),
