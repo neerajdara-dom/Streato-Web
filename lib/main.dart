@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:streato_app/pages/cart_page.dart';
 import 'package:streato_app/pages/map_page.dart';
+import 'package:streato_app/pages/social_feed_page.dart';
 import 'package:streato_app/pages/vendor_stories_page.dart';
 import 'package:streato_app/widgets/chronicles_bar.dart';
 import 'package:streato_app/widgets/story_video_card.dart';
@@ -1213,6 +1214,7 @@ class HomePageContent extends StatelessWidget {
   final VoidCallback onHighlyRated;
   final VoidCallback onMostLoved;
   final VoidCallback onNearby;
+  final Function(String) onMoodSelected;
 
   const HomePageContent({
     super.key,
@@ -1220,6 +1222,7 @@ class HomePageContent extends StatelessWidget {
     required this.onHighlyRated,
     required this.onMostLoved,
     required this.onNearby,
+    required this.onMoodSelected,
   });
 
 
@@ -1304,10 +1307,15 @@ class HomePageContent extends StatelessWidget {
                                     ),
                                     child: CircleAvatar(
                                       radius: 32,
-                                      backgroundImage: NetworkImage(
-                                        data["userPhoto"] ?? "",
-                                      ),
-                                    ),
+                                      backgroundImage: (data["userPhoto"] != null &&
+                                          data["userPhoto"].toString().isNotEmpty)
+                                          ? NetworkImage(data["userPhoto"])
+                                          : null,
+                                      child: (data["userPhoto"] == null ||
+                                          data["userPhoto"].toString().isEmpty)
+                                          ? const Icon(Icons.person, color: Colors.white)
+                                          : null,
+                                    )
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
@@ -1358,20 +1366,28 @@ class HomePageContent extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final items = [
                     {
-                      "title": "TRENDING 🔥",
-                      "image": "https://images.unsplash.com/photo-1600891964599-f61ba0e24092",
+                      "title": "SPICY KICK",
+                      "image": "assets/images/spicykick.jpg",
+                      "type": "spicy",
+                      //"image": "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=800"
                     },
                     {
-                      "title": "HIGHLY RATED ⭐",
-                      "image": "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe",
+                      "title": "SWEET ESCAPE",
+                      "image": "assets/images/sweetescape.jpg",
+                      "type": "sweet",
+                      //"image": "https://images.unsplash.com/photo-1589308078059-be1415eab4c3?w=800"
                     },
                     {
-                      "title": "MOST LOVED 💛",
-                      "image": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38",
+                      "title": "LUXURY STREET",
+                      "image":"assets/images/luxurystreat.png",
+                      "type": "luxury",
+                      //"image": "https://images.unsplash.com/photo-1544025162-d76694265947?w=800"
                     },
                     {
-                      "title": "NEARBY 📍",
-                      "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950",
+                      "title": "FOR YOU",
+                      "image": "assets/images/sky.png",
+                      "type": "all",
+                      //"image": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800"
                     },
                   ];
 
@@ -1381,17 +1397,19 @@ class HomePageContent extends StatelessWidget {
                     title: item["title"]!,
                     image: item["image"]!,
                     onTap: () {
-                      if (item["title"] == "TRENDING 🔥") {
-                        onTrending();
+                      final mood = item["type"]!;
+
+                      if (mood == "spicy") {
+                        onMoodSelected("spicy");
                       }
-                      else if (item["title"] == "HIGHLY RATED ⭐") {
-                        onHighlyRated();
+                      else if (mood == "sweet") {
+                        onMoodSelected("sweet");
                       }
-                      else if (item["title"] == "MOST LOVED 💛") {
-                        onMostLoved();
+                      else if (mood == "luxury") {
+                        onMoodSelected("luxury");
                       }
-                      else if (item["title"] == "NEARBY 📍") {
-                        onNearby();
+                      else {
+                        onMoodSelected("all");
                       }
                     },
 
@@ -1544,7 +1562,9 @@ class _FeatureCategoryCardState extends State<FeatureCategoryCard> {
       onEnter: (_) => setState(() => isHovered = true),
       onExit: (_) => setState(() => isHovered = false),
       child: GestureDetector(
-        onTap: widget.onTap,
+        onTap: (){
+          widget.onTap();
+        },
         child: AnimatedScale(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeOutCubic,
@@ -1575,22 +1595,27 @@ class _FeatureCategoryCardState extends State<FeatureCategoryCard> {
                     children: [
                       // 🖼 IMAGE
                       Positioned.fill(
-                        child: Image.network(
+                        child: Image.asset(
                           widget.image,
                           fit: BoxFit.cover,
                         ),
                       ),
 
                       // 🌫 GRADIENT
-                      Positioned.fill(
+                      // 🌫 MODERN TEXT-ONLY OVERLAY
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
                         child: Container(
+                          height: 70, // only bottom area
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
                                 Colors.transparent,
-                                Colors.black.withOpacity(0.7),
+                                Colors.black.withOpacity(0.55),
                               ],
                             ),
                           ),
@@ -1606,8 +1631,14 @@ class _FeatureCategoryCardState extends State<FeatureCategoryCard> {
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.3,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black54,
+                                blurRadius: 6,
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -1638,6 +1669,9 @@ class StallsPageContent extends StatefulWidget {
 
 class _StallsPageContentState extends State<StallsPageContent> {
   Position? userPosition;
+  bool showFilters = false;
+  String selectedCategory = "All";
+  String selectedMood="all";
 
   @override
   void initState() {
@@ -1675,6 +1709,42 @@ class _StallsPageContentState extends State<StallsPageContent> {
           return Vendor.fromFirestore(doc.id, data);
         }).toList();
         List<Vendor> filteredVendors = vendors;
+        /// ================= MOOD FILTER =================
+        if (widget.filterType != null) {
+          final mood = widget.filterType!.toLowerCase();
+
+          if (mood == "spicy" || mood == "sweet" || mood == "luxury") {
+            filteredVendors = filteredVendors.where((v) {
+              return v.category.toLowerCase().contains(mood);
+            }).toList();
+          }
+        }
+        /// ================= CATEGORY FILTER =================
+        if (selectedCategory != "All") {
+          filteredVendors = filteredVendors.where((vendor) {
+
+            final category = vendor.category.toLowerCase();
+
+            if (selectedCategory == "Indian") {
+              return category.contains("indian");
+            }
+
+            if (selectedCategory == "Chinese") {
+              return category.contains("chinese");
+            }
+
+            if (selectedCategory == "Fusion") {
+              return category.contains("fusion");
+            }
+
+            if (selectedCategory == "Street Snacks") {
+              return category.contains("snack") ||
+                  category.contains("street");
+            }
+
+            return true;
+          }).toList();
+        }
 
 // 🔥 APPLY FILTER IF TRENDING
         if (widget.filterType == "trending") {
@@ -1702,10 +1772,6 @@ class _StallsPageContentState extends State<StallsPageContent> {
             return d <= 3;
           }).toList();
         }
-
-
-
-
         // 🔥 Sort by nearest
         filteredVendors.sort((a, b) {
           final da = distanceInKm(
@@ -1722,43 +1788,134 @@ class _StallsPageContentState extends State<StallsPageContent> {
           );
           return da.compareTo(db);
         });
+        return Column(
+          children: [
 
-
-
-        return Padding(
-          padding: const EdgeInsets.all(16),
-          child: GridView.builder(
-            itemCount: filteredVendors.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              crossAxisSpacing: 20,
-              mainAxisSpacing: 20,
-              childAspectRatio: 1.05,
+            /// ================= FILTER BUTTON =================
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        showFilters = !showFilters;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: Colors.grey.shade400),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                              Colors.black.withOpacity(0.08),
+                              blurRadius:10,
+                          )
+                        ]
+                      ),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.tune, size: 18),
+                          SizedBox(width: 6),
+                          Text("Filters"),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            itemBuilder: (context, index) {
-              final vendor = filteredVendors[index];
 
-              final dist = distanceInKm(
-                userPosition!.latitude,
-                userPosition!.longitude,
-                vendor.lat,
-                vendor.lng,
-              );
+            /// ================= CATEGORY CHIPS =================
+            if (showFilters)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: Wrap(
+                  spacing: 10,
+                  children: [
+                    _chip("All"),
+                    _chip("Indian"),
+                    _chip("Chinese"),
+                    _chip("Fusion"),
+                    _chip("Street Snacks"),
+                  ],
+                ),
+              ),
 
-              return _StallCard(
-                name: vendor.name,
-                image: vendor.image,
-                rating: vendor.rating,
-                distance: dist,
-                onTap: () {
-                  widget.onOpenStall(vendor); // ✅ REAL VENDOR OBJECT
-                },
-              );
-            },
-          ),
+            /// ================= STALL GRID =================
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: GridView.builder(
+                  itemCount: filteredVendors.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 20,
+                    mainAxisSpacing: 20,
+                    childAspectRatio: 1.05,
+                  ),
+                  itemBuilder: (context, index) {
+                    final vendor = filteredVendors[index];
+
+                    final dist = distanceInKm(
+                      userPosition!.latitude,
+                      userPosition!.longitude,
+                      vendor.lat,
+                      vendor.lng,
+                    );
+
+                    return _StallCard(
+                      name: vendor.name,
+                      image: vendor.image,
+                      rating: vendor.rating,
+                      distance: dist,
+                      onTap: () {
+                        widget.onOpenStall(vendor);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
         );
 
       },
+    );
+  }
+  Widget _chip(String label) {
+    final bool isActive = selectedCategory == label;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedCategory = label;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFFFFB300) : Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.grey.shade400),
+          boxShadow: [
+            BoxShadow(
+              color:
+                Colors.black.withOpacity(0.06),
+              blurRadius:6,
+            )
+          ]
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: isActive ? FontWeight.bold : null,
+            color: isActive ? Colors.black : null,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1856,9 +2013,6 @@ class _StallCardState extends State<_StallCard> {
     );
   }
 }
-
-
-
 class VendorCard extends StatelessWidget {
   final Vendor vendor;
   final VoidCallback onTap;
@@ -1957,6 +2111,14 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       selectedPage = 1;
       stallFilterType="trending";
+    });
+  }
+  Future<void> openMood(String mood) async {
+    print("Mood clicked: $mood");
+
+    setState(() {
+      selectedPage = 1;        // opens stalls page
+      stallFilterType = mood;  // applies filter
     });
   }
 
@@ -2215,7 +2377,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                     const SizedBox(height: 20),
                                     _NavIcon(
-                                      icon: Icons.menu_book,
+                                      icon: Icons.explore,
                                       isActive: selectedPage == 2,
                                       onTap: () => setState(() => selectedPage = 2),
                                     ),
@@ -2229,7 +2391,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     _NavIcon(
                                       icon: Icons.map,
                                       isActive: selectedPage == 5,
-                                      onTap: () => setState(() => selectedPage = 5),
+                                      onTap: ()=> setState(()=> selectedPage=5),
                                     ),
                                   ],
                                 ),
@@ -2386,6 +2548,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         onHighlyRated: openHighlyRated,
                                         onMostLoved: openMostLoved,
                                         onNearby: openNearby,
+                                        onMoodSelected: openMood,
                                       );
 
                                     }
@@ -2405,7 +2568,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
                                     if (selectedPage == 2) {
-                                      return const VendorStoriesPage(); // ✅ VENDOR STORIES
+                                      return const SocialFeedPage(); // ✅ VENDOR STORIES
                                     }
 
                                     if (selectedPage == 3) {
@@ -2441,7 +2604,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     if(selectedPage==6){
                                       return const LeaderboardPage();
                                     }
-                                    return HomePageContent(onTrending: () {  },onHighlyRated: () {  }, onMostLoved: () {  }, onNearby: () {  },); // fallback safety
+                                    return HomePageContent(
+                                      onTrending: () {  },onHighlyRated: () {  }, onMostLoved: () {  }, onNearby: () {  },onMoodSelected: openMood,); // fallback safety
                                   }(),
                                 ),
 
@@ -2480,6 +2644,7 @@ class SearchResultsPage extends StatelessWidget {
       return const Center(child: Text("No stalls match your search"));
     }
 
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: GridView.builder(
@@ -2507,10 +2672,6 @@ class SearchResultsPage extends StatelessWidget {
     );
   }
 }
-
-
-
-
 class _NavIcon extends StatefulWidget {
   final IconData icon;
   final bool isActive;
