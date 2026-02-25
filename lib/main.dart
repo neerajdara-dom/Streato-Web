@@ -716,7 +716,7 @@ const LinearGradient streatoGradient = LinearGradient(
 );
 
 class ThemeController extends ChangeNotifier {
-  bool isDark = false;
+  bool isDark = true;
 
   void toggleTheme() {
     isDark = !isDark;
