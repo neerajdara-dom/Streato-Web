@@ -1,123 +1,200 @@
 import 'package:flutter/material.dart';
-import '../services/vendor_service.dart';
-import '../services/gemini_service.dart';
-import '../models/vendor.dart';
 
-class StreatoAIAssistantPage extends StatefulWidget {
-  const StreatoAIAssistantPage({super.key});
+class AIAssistantPage extends StatefulWidget {
+  const AIAssistantPage({super.key});
 
   @override
-  State<StreatoAIAssistantPage> createState() => _StreatoAIAssistantPageState();
+  State<AIAssistantPage> createState() => _AIAssistantPageState();
 }
 
-class _StreatoAIAssistantPageState extends State<StreatoAIAssistantPage> {
+class _AIAssistantPageState extends State<AIAssistantPage> {
   final TextEditingController controller = TextEditingController();
-  final List<Map<String, String>> messages = [];
-  bool loading = false;
-
-  Future<void> askAI(String query) async {
-    if (query.trim().isEmpty) return;
-
-    setState(() {
-      messages.add({"role": "user", "text": query});
-      loading = true;
-    });
-
-    // 🔥 Get vendors from your app database
-    final vendors = await VendorService.getAllVendors();
-
-    // Build context for AI
-    String context = "";
-    for (final v in vendors.take(40)) {
-      context +=
-      "${v.name} | rating:${v.rating} | category:${v.category} | location:${v.locationName}\n";
-      for (final item in v.menu.take(5)) {
-        context += " - ${item.name} ₹${item.price}\n";
-      }
-    }
-
-    final reply = await GeminiService.chatWithContext(
-      userMessage: query,
-      context: context,
-    );
-
-    setState(() {
-      messages.add({"role": "ai", "text": reply});
-      loading = false;
-    });
-
-    controller.clear();
-  }
+  final List<Map<String, dynamic>> messages = [];
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Stack(
       children: [
 
-        /// CHAT MESSAGES
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: messages.length,
-            itemBuilder: (context, index) {
-              final msg = messages[index];
-              final isUser = msg["role"] == "user";
-
-              return Align(
-                alignment:
-                isUser ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 6),
-                  padding: const EdgeInsets.all(12),
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  decoration: BoxDecoration(
-                    color: isUser
-                        ? const Color(0xFFFFB300)
-                        : Colors.grey.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(14),
+        /// 🌙 Ambient Glow (Dark Only)
+        if (isDark)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 1.2,
+                    colors: [
+                      const Color(0xFFFFB300).withOpacity(0.12),
+                      Colors.transparent,
+                    ],
                   ),
-                  child: Text(
-                    msg["text"]!,
-                    style: TextStyle(
-                      color: isUser ? Colors.black : null,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-
-        if (loading)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: CircularProgressIndicator(),
-          ),
-
-        /// INPUT BAR
-        Container(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  decoration: const InputDecoration(
-                    hintText: "Ask me anything about food, stalls, price, nearby...",
-                    border: OutlineInputBorder(),
-                  ),
-                  onSubmitted: askAI,
                 ),
               ),
-              const SizedBox(width: 10),
-              ElevatedButton(
-                onPressed: () => askAI(controller.text),
-                child: const Icon(Icons.send),
-              )
-            ],
+            ),
           ),
-        )
+
+        Column(
+          children: [
+
+            /// 💬 CHAT AREA
+            Expanded(
+              child: messages.isEmpty
+                  ? Center(
+                child: Text(
+                  "Ask me anything about food, stalls, price, nearby...",
+                  style: TextStyle(
+                    color: isDark
+                        ? Colors.white54
+                        : Colors.black54,
+                    fontSize: 16,
+                  ),
+                ),
+              )
+                  : ListView.builder(
+                padding: const EdgeInsets.all(20),
+                itemCount: messages.length,
+                itemBuilder: (context, index) {
+                  final msg = messages[index];
+                  return _chatBubble(
+                    text: msg["text"],
+                    isUser: msg["isUser"],
+                    isDark: isDark,
+                  );
+                },
+              ),
+            ),
+
+            /// 🧊 INPUT BAR
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: _inputBar(isDark),
+            ),
+          ],
+        ),
       ],
     );
+  }
+
+  /// 🔥 CHAT BUBBLE
+  Widget _chatBubble({
+    required String text,
+    required bool isUser,
+    required bool isDark,
+  }) {
+    return Align(
+      alignment:
+      isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(
+            horizontal: 16, vertical: 12),
+        constraints: const BoxConstraints(maxWidth: 400),
+        decoration: BoxDecoration(
+          color: isUser
+              ? const Color(0xFFFFB300)
+              : (isDark
+              ? Colors.white.withOpacity(0.08)
+              : Colors.white),
+
+          borderRadius: BorderRadius.circular(16),
+
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withOpacity(0.4)
+                  : Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+            )
+          ],
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: isUser
+                ? Colors.black
+                : (isDark ? Colors.white : Colors.black),
+            fontSize: 15,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// ✨ INPUT BAR
+  Widget _inputBar(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withOpacity(0.06)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.15)
+              : Colors.black.withOpacity(0.1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withOpacity(0.5)
+                : Colors.black.withOpacity(0.06),
+            blurRadius: 15,
+          )
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              style: TextStyle(
+                color: isDark
+                    ? Colors.white
+                    : Colors.black,
+              ),
+              decoration: InputDecoration(
+                hintText: "Ask about dosa, cheap food, nearby...",
+                hintStyle: TextStyle(
+                  color: isDark
+                      ? Colors.white54
+                      : Colors.black54,
+                ),
+                border: InputBorder.none,
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.send,
+              color: Color(0xFFFFB300),
+            ),
+            onPressed: _sendMessage,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _sendMessage() {
+    if (controller.text.trim().isEmpty) return;
+
+    setState(() {
+      messages.add({
+        "text": controller.text.trim(),
+        "isUser": true,
+      });
+
+      messages.add({
+        "text": "Let me find the best options for you...",
+        "isUser": false,
+      });
+    });
+
+    controller.clear();
   }
 }

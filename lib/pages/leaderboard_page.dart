@@ -6,6 +6,8 @@ class LeaderboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection("users")
@@ -28,43 +30,47 @@ class LeaderboardPage extends StatelessWidget {
         return Stack(
           children: [
 
-            /// 🌟 GOLDEN BACKGROUND GLOW
-            Positioned.fill(
-              child: IgnorePointer(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment.topCenter,
-                      radius: 1.3,
-                      colors: [
-                        const Color(0xFFFFB300).withOpacity(0.15),
-                        Colors.transparent,
-                      ],
+            /// 🌙 Golden Glow ONLY in Dark Mode
+            if (isDark)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment.topCenter,
+                        radius: 1.3,
+                        colors: [
+                          const Color(0xFFFFB300).withOpacity(0.15),
+                          Colors.transparent,
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
             SingleChildScrollView(
               child: Column(
                 children: [
                   const SizedBox(height: 30),
 
-                  /// 🏆 TOP 3 PODIUM
+                  /// 🏆 TOP 3
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      if (top3.length > 1) _podium(top3[1], 2, 140),
-                      if (top3.isNotEmpty) _podium(top3[0], 1, 190),
-                      if (top3.length > 2) _podium(top3[2], 3, 120),
+                      if (top3.length > 1)
+                        _podium(context, top3[1], 2, 140),
+                      if (top3.isNotEmpty)
+                        _podium(context, top3[0], 1, 190),
+                      if (top3.length > 2)
+                        _podium(context, top3[2], 3, 120),
                     ],
                   ),
 
                   const SizedBox(height: 40),
 
-                  /// 📋 OTHER RANKS
+                  /// 📋 Others
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -74,6 +80,7 @@ class LeaderboardPage extends StatelessWidget {
                       others[index].data() as Map<String, dynamic>;
 
                       return _rankCard(
+                        context: context,
                         rank: index + 4,
                         name: data["name"] ?? "User",
                         points: data["streatoPoints"] ?? 0,
@@ -91,15 +98,16 @@ class LeaderboardPage extends StatelessWidget {
     );
   }
 
-  /// 🏆 PODIUM CARD
-  Widget _podium(DocumentSnapshot doc, int rank, double height) {
+  /// 🏆 PODIUM
+  Widget _podium(
+      BuildContext context, DocumentSnapshot doc, int rank, double height) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final data = doc.data() as Map<String, dynamic>;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Column(
         children: [
-          /// AVATAR
           CircleAvatar(
             radius: 36,
             backgroundColor: const Color(0xFFFFB300),
@@ -117,40 +125,51 @@ class LeaderboardPage extends StatelessWidget {
 
           Text(
             data["name"],
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: isDark ? Colors.white : Colors.black,
             ),
           ),
 
           const SizedBox(height: 10),
 
-          /// PODIUM BLOCK
           Container(
             width: 110,
             height: height,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFFB300), Color(0xFFFF8F00)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
+              color: isDark
+                  ? Colors.white.withOpacity(0.06)
+                  : const Color(0xFFFFB300),
+
               borderRadius: BorderRadius.circular(18),
-              boxShadow: [
+
+              border: isDark
+                  ? Border.all(color: Colors.white.withOpacity(0.15))
+                  : null,
+
+              boxShadow: isDark
+                  ? [
                 BoxShadow(
-                  color: const Color(0xFFFFB300).withOpacity(0.7),
-                  blurRadius: 25,
+                  color:
+                  const Color(0xFFFFB300).withOpacity(0.6),
+                  blurRadius: 20,
                   spreadRadius: 1,
+                ),
+              ]
+                  : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 6,
                 ),
               ],
             ),
             child: Center(
               child: Text(
                 "${data["streatoPoints"]}",
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: isDark ? Colors.white : Colors.black,
                 ),
               ),
             ),
@@ -158,18 +177,17 @@ class LeaderboardPage extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          /// RANK BADGE
           Container(
             padding:
             const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.black,
+              color: isDark ? Colors.black : Colors.grey.shade300,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               "#$rank",
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
                 fontSize: 12,
               ),
             ),
@@ -179,30 +197,41 @@ class LeaderboardPage extends StatelessWidget {
     );
   }
 
-  /// 📋 OTHER RANK CARD (Glass Style)
+  /// 📋 RANK CARD
   Widget _rankCard({
+    required BuildContext context,
     required int rank,
     required String name,
     required int points,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 80, vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding:
+      const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        color: isDark
+            ? Colors.white.withOpacity(0.06)
+            : Colors.white,
 
-        /// GLASS BACKGROUND
-        color: Colors.white.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(14),
 
-        border: Border.all(
-          color: Colors.white.withOpacity(0.12),
-        ),
+        border: isDark
+            ? Border.all(color: Colors.white.withOpacity(0.1))
+            : Border.all(color: Colors.black.withOpacity(0.05)),
 
-        boxShadow: [
+        boxShadow: isDark
+            ? [
           BoxShadow(
             color: Colors.black.withOpacity(0.45),
             blurRadius: 18,
-            offset: const Offset(0, 8),
+          ),
+        ]
+            : [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 6,
           ),
         ],
       ),
@@ -215,8 +244,8 @@ class LeaderboardPage extends StatelessWidget {
           Expanded(
             child: Text(
               name,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
                 fontWeight: FontWeight.w600,
                 fontSize: 15,
               ),
@@ -227,8 +256,8 @@ class LeaderboardPage extends StatelessWidget {
             children: [
               Text(
                 "$points",
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -245,23 +274,16 @@ class LeaderboardPage extends StatelessWidget {
     );
   }
 
-  /// 🔥 GLOWING RANK CIRCLE
+  /// 🔥 Rank Circle
   Widget _rankCircle(int rank) {
     return Container(
-      width: 38,
-      height: 38,
-      decoration: BoxDecoration(
+      width: 36,
+      height: 36,
+      decoration: const BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [Color(0xFFFFB300), Color(0xFFFF8F00)],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFFB300).withOpacity(0.6),
-            blurRadius: 12,
-            spreadRadius: 1,
-          ),
-        ],
       ),
       alignment: Alignment.center,
       child: Text(

@@ -2655,7 +2655,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       return const LeaderboardPage();
                                     }
                                     if(selectedPage==7){
-                                      return const StreatoAIAssistantPage();
+                                      return const AIAssistantPage();
                                     }
                                     return HomePageContent(
                                       onTrending: () {  },onHighlyRated: () {  }, onMostLoved: () {  }, onNearby: () {  },onMoodSelected: openMood,); // fallback safety
